@@ -12,6 +12,10 @@ async function bootstrap() {
         rawBody: true,
         bufferLogs: true,
     });
+    app.enableCors({
+        origin: "http://localhost:3000",
+        credentials: true,
+    });
     app.useLogger(app.get(nestjs_pino_1.Logger));
     const config = app.get(config_1.ConfigService);
     const prefix = config.get('API_PREFIX') || 'api/v1';

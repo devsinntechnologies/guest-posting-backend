@@ -12,6 +12,11 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  app.enableCors({
+  origin: "http://localhost:3000",
+  credentials: true,
+});
+
   app.useLogger(app.get(Logger));
 
   const config = app.get(ConfigService);
