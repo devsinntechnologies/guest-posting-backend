@@ -13,7 +13,11 @@ async function bootstrap() {
         bufferLogs: true,
     });
     app.enableCors({
-        origin: "http://localhost:3000",
+        origin: [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+        ],
         credentials: true,
     });
     app.useLogger(app.get(nestjs_pino_1.Logger));
