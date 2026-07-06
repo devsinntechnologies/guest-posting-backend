@@ -105,7 +105,7 @@ export class CategoriesService {
   }
 
   async remove(id: string, role: UserRole) {
-    if (role !== UserRole.SUPER_ADMIN) {
+    if (role !== UserRole.ADMIN) {
       throw new ForbiddenException('Only super admins can delete categories');
     }
     const category = await this.prisma.category.findUnique({ where: { id } });

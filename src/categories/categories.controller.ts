@@ -50,7 +50,7 @@ export class CategoriesController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create category' })
   create(@Body() dto: CreateCategoryDto) {
@@ -59,7 +59,7 @@ export class CategoriesController {
 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update category' })
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
@@ -68,7 +68,7 @@ export class CategoriesController {
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete category (admin only)' })
   remove(@Param('id') id: string, @CurrentUser('role') role: UserRole) {

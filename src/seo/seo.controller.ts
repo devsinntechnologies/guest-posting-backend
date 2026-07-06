@@ -52,7 +52,7 @@ export class SeoController {
 
   @Post('pages')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create SEO page' })
   create(@Body() dto: CreateSeoPageDto) {
@@ -61,7 +61,7 @@ export class SeoController {
 
   @Post('pages/bulk-generate')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Bulk generate programmatic SEO pages' })
   bulkGenerate(@Body() dto: BulkGenerateSeoDto) {
@@ -70,7 +70,7 @@ export class SeoController {
 
   @Patch('pages/:id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update SEO page meta' })
   update(@Param('id') id: string, @Body() dto: UpdateSeoMetaDto) {

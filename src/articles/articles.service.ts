@@ -304,7 +304,7 @@ export class ArticlesService {
     userId: string,
     userRole: UserRole,
   ) {
-    if (userRole === UserRole.SUPER_ADMIN || userRole === UserRole.EDITOR) {
+    if (userRole === UserRole.ADMIN) {
       return;
     }
 

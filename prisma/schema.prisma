@@ -8,9 +8,9 @@ datasource db {
 }
 
 enum UserRole {
-  SUPER_ADMIN
-  EDITOR
+  ADMIN
   CONTRIBUTOR
+  USER
 }
 
 enum ArticleStatus {
@@ -76,7 +76,7 @@ model User {
   name            String
   email           String    @unique
   password        String
-  role            UserRole  @default(CONTRIBUTOR)
+  role            UserRole  @default(USER)
   companyName     String?
   websiteUrl      String?
   avatarUrl       String?

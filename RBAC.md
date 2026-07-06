@@ -1,76 +1,25 @@
-# Role-Based Access Control (RBAC)
+# Role-Based Access Control
 
 ## Roles
 
 | Role | Description |
 |------|-------------|
-| `SUPER_ADMIN` | Full platform access |
-| `EDITOR` | Content review, publish, SEO management |
-| `CONTRIBUTOR` | Submit and track own guest posts |
+| `ADMIN` | Full platform control — users, content, categories, tags, submissions, comments, packages |
+| `CONTRIBUTOR` | Submit guest posts, track submissions, edit own drafts |
+| `USER` | Registered visitor — read articles, comment, bookmark (Phase 2), purchase packages (Phase 2) |
 
-## Permission Matrix
+## Default registration role
 
-| Action | Super Admin | Editor | Contributor |
-|--------|:-----------:|:------:|:-----------:|
-| Manage users | ✅ | ❌ | ❌ |
-| Manage categories/tags | ✅ | ✅ (edit only) | ❌ |
-| Delete categories/tags | ✅ | ❌ | ❌ |
-| Manage pricing/packages | ✅ | ❌ | ❌ |
-| View/manage all payments | ✅ | ❌ | ❌ |
-| View own payments | ✅ | ✅ | ✅ |
-| Submit articles | ✅ | ✅ | ✅ |
-| Review/approve/reject | ✅ | ✅ | ❌ |
-| Edit any article | ✅ | ✅ | ❌ |
-| Edit own article (draft/pending/rejected) | ✅ | ✅ | ✅ |
-| Publish articles | ✅ | ✅ | ❌ |
-| Track own submissions | ✅ | ✅ | ✅ |
-| Manage SEO pages | ✅ | ✅ | ❌ |
-| Manage sponsored posts | ✅ | ❌ | ❌ |
-| Request link insertions | ✅ | ❌ | ✅ |
-| Manage link insertions | ✅ | ❌ | ❌ |
-| Moderate comments | ✅ | ✅ | ❌ |
-| Dashboard (platform stats) | ✅ | ✅ | ❌ |
-| Dashboard (own stats) | ✅ | ✅ | ✅ |
+New signups receive the `USER` role. Admins can promote users to `CONTRIBUTOR` from the admin panel.
 
-## Enforcement
+## Route access (frontend)
 
-### `@Roles()` + `RolesGuard`
+| Route | Allowed roles |
+|-------|----------------|
+| `/admin/*` | `ADMIN` |
+| `/contributor/*` | `CONTRIBUTOR` |
+| `/blog`, public pages | Everyone (including guests) |
 
-Applied at controller method level:
+## Backend enforcement
 
-```typescript
-@Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
-@UseGuards(RolesGuard)
-```
-
-Implementation: `src/common/guards/roles.guard.ts`
-
-### Global JWT Guard
-
-`JwtAuthGuard` is registered globally. Routes marked `@Public()` skip authentication.
-
-Implementation: `src/common/guards/jwt-auth.guard.ts`
-
-### Ownership Checks
-
-Contributors are restricted to their own resources via service-layer checks:
-
-- **Articles**: `ArticlesService.assertCanEdit()` — own articles only, and only in `DRAFT`, `PENDING_REVIEW`, or `REJECTED` status
-- **Orders**: `GET /orders/my-orders` scoped to authenticated user
-- **Link insertions**: contributors see only their own requests
-- **Dashboard**: contributor stats scoped to `authorId`
-
-Optional `OwnershipGuard` available for route-level enforcement: `src/common/guards/ownership.guard.ts`
-
-## Decorators
-
-| Decorator | Purpose |
-|-----------|---------|
-| `@Roles(...roles)` | Require specific roles |
-| `@Public()` | Skip JWT authentication |
-| `@Cacheable(seconds)` | Set cache headers on public SEO endpoints |
-| `@CurrentUser()` | Extract JWT payload in controllers |
-
-## Testing
-
-RBAC unit tests: `src/common/guards/roles.guard.spec.ts`
+Use `@Roles(UserRole.ADMIN)` on protected admin endpoints. Contributors are restricted in service-layer checks for article ownership and status changes.

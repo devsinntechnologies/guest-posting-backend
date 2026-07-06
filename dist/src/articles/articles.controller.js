@@ -33,6 +33,12 @@ let ArticlesController = class ArticlesController {
     mySubmissions(userId, query) {
         return this.articlesService.mySubmissions(userId, query);
     }
+    findAdmin(query) {
+        return this.articlesService.findAll(query, client_1.UserRole.ADMIN);
+    }
+    findById(id) {
+        return this.articlesService.findById(id);
+    }
     findBySlug(slug) {
         return this.articlesService.findBySlug(slug);
     }
@@ -70,6 +76,26 @@ __decorate([
     __metadata("design:paramtypes", [String, articles_dto_1.ArticleQueryDto]),
     __metadata("design:returntype", void 0)
 ], ArticlesController.prototype, "mySubmissions", null);
+__decorate([
+    (0, common_1.Get)('admin'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'List all articles for admin/editor review' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [articles_dto_1.ArticleQueryDto]),
+    __metadata("design:returntype", void 0)
+], ArticlesController.prototype, "findAdmin", null);
+__decorate([
+    (0, common_1.Get)('detail/:id'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Get article by ID (authenticated)' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ArticlesController.prototype, "findById", null);
 __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Get)(':slug'),

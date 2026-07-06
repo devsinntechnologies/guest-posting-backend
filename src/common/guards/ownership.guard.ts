@@ -46,7 +46,7 @@ export class OwnershipGuard implements CanActivate {
     const user = request.user;
     if (!user) throw new ForbiddenException('Access denied');
 
-    if (user.role === UserRole.SUPER_ADMIN || user.role === UserRole.EDITOR) {
+    if (user.role === UserRole.ADMIN) {
       return true;
     }
 

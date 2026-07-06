@@ -39,36 +39,24 @@ const prisma = new client_1.PrismaClient();
 async function main() {
     console.log('Seeding database...');
     const adminPassword = await bcrypt.hash('Admin123!', 12);
-    const editorPassword = await bcrypt.hash('Editor123!', 12);
     const contributorPassword = await bcrypt.hash('Contributor123!', 12);
+    const userPassword = await bcrypt.hash('User123!', 12);
     const admin = await prisma.user.upsert({
         where: { email: 'admin@devsinn.com' },
-        update: {},
+        update: { role: client_1.UserRole.ADMIN },
         create: {
-            name: 'Super Admin',
+            name: 'Platform Admin',
             email: 'admin@devsinn.com',
             password: adminPassword,
-            role: client_1.UserRole.SUPER_ADMIN,
+            role: client_1.UserRole.ADMIN,
             isActive: true,
             emailVerifiedAt: new Date(),
             companyName: 'Devsinn',
         },
     });
-    const editor = await prisma.user.upsert({
-        where: { email: 'editor@devsinn.com' },
-        update: {},
-        create: {
-            name: 'Jane Editor',
-            email: 'editor@devsinn.com',
-            password: editorPassword,
-            role: client_1.UserRole.EDITOR,
-            isActive: true,
-            emailVerifiedAt: new Date(),
-        },
-    });
     const contributor = await prisma.user.upsert({
         where: { email: 'contributor@devsinn.com' },
-        update: {},
+        update: { role: client_1.UserRole.CONTRIBUTOR },
         create: {
             name: 'Bob Contributor',
             email: 'contributor@devsinn.com',
@@ -77,6 +65,18 @@ async function main() {
             isActive: true,
             companyName: 'Tech Blog Inc',
             websiteUrl: 'https://techblog.example.com',
+        },
+    });
+    const user = await prisma.user.upsert({
+        where: { email: 'user@devsinn.com' },
+        update: { role: client_1.UserRole.USER },
+        create: {
+            name: 'Alex User',
+            email: 'user@devsinn.com',
+            password: userPassword,
+            role: client_1.UserRole.USER,
+            isActive: true,
+            emailVerifiedAt: new Date(),
         },
     });
     const categories = await Promise.all([
@@ -108,7 +108,6 @@ async function main() {
                 name: 'Development',
                 slug: 'development',
                 description: 'Software development articles',
-                parentCategoryId: undefined,
             },
         }),
     ]);
@@ -227,7 +226,7 @@ async function main() {
             slug: 'archived-legacy-post',
             status: client_1.ArticleStatus.ARCHIVED,
             publishedAt: new Date('2024-01-01'),
-            authorId: editor.id,
+            authorId: admin.id,
             categoryId: categories[0].id,
         },
     ];
@@ -250,8 +249,8 @@ async function main() {
     }
     console.log('Seed completed:');
     console.log(`  Admin: ${admin.email} / Admin123!`);
-    console.log(`  Editor: ${editor.email} / Editor123!`);
     console.log(`  Contributor: ${contributor.email} / Contributor123!`);
+    console.log(`  User: ${user.email} / User123!`);
 }
 main()
     .catch((e) => {

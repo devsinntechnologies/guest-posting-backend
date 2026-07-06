@@ -56,7 +56,7 @@ export class PaymentsController {
 
   @Get('admin/orders')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all orders (admin)' })
   allOrders(@Query() query: PaginationDto) {

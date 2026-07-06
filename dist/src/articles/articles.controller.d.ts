@@ -78,6 +78,102 @@ export declare class ArticlesController {
         rejectionReason: string | null;
         publishedAt: Date | null;
     }>>;
+    findAdmin(query: ArticleQueryDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
+        category: {
+            id: string;
+            name: string;
+            slug: string;
+        } | null;
+        articleTags: ({
+            tag: {
+                id: string;
+                name: string;
+                createdAt: Date;
+                slug: string;
+            };
+        } & {
+            tagId: string;
+            articleId: string;
+        })[];
+        author: {
+            id: string;
+            name: string;
+            avatarUrl: string | null;
+        };
+    } & {
+        id: string;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        slug: string;
+        metaTitle: string | null;
+        metaDescription: string | null;
+        title: string;
+        content: string;
+        excerpt: string | null;
+        featuredImageUrl: string | null;
+        authorId: string;
+        categoryId: string | null;
+        status: import("@prisma/client").$Enums.ArticleStatus;
+        targetUrl: string | null;
+        anchorText: string | null;
+        metaKeywords: string | null;
+        readingTimeMinutes: number;
+        viewCount: number;
+        rejectionReason: string | null;
+        publishedAt: Date | null;
+    }>>;
+    findById(id: string): Promise<{
+        category: {
+            id: string;
+            name: string;
+            createdAt: Date;
+            updatedAt: Date;
+            slug: string;
+            description: string | null;
+            metaTitle: string | null;
+            metaDescription: string | null;
+            parentCategoryId: string | null;
+        } | null;
+        articleTags: ({
+            tag: {
+                id: string;
+                name: string;
+                createdAt: Date;
+                slug: string;
+            };
+        } & {
+            tagId: string;
+            articleId: string;
+        })[];
+        author: {
+            id: string;
+            email: string;
+            name: string;
+        };
+    } & {
+        id: string;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+        slug: string;
+        metaTitle: string | null;
+        metaDescription: string | null;
+        title: string;
+        content: string;
+        excerpt: string | null;
+        featuredImageUrl: string | null;
+        authorId: string;
+        categoryId: string | null;
+        status: import("@prisma/client").$Enums.ArticleStatus;
+        targetUrl: string | null;
+        anchorText: string | null;
+        metaKeywords: string | null;
+        readingTimeMinutes: number;
+        viewCount: number;
+        rejectionReason: string | null;
+        publishedAt: Date | null;
+    }>;
     findBySlug(slug: string): Promise<{
         category: {
             id: string;

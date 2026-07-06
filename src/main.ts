@@ -1,31 +1,62 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger } from 'nestjs-pino';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     rawBody: true,
     bufferLogs: true,
   });
 
-  app.enableCors({
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:3002",
-  ],
-  credentials: true,
-});
-
   app.useLogger(app.get(Logger));
 
   const config = app.get(ConfigService);
+
+  // Trust nginx reverse proxy (required for correct client IP / rate limiting)
+  app.set('trust proxy', 1);
+
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      const corsOrigins = config.get<string>('CORS_ORIGINS');
+      const allowed =
+        corsOrigins === '*'
+          ? true
+          : [
+              'http://localhost',
+              'http://localhost:80',
+              'http://localhost:3000',
+              'http://localhost:3001',
+              'http://localhost:3002',
+              ...(corsOrigins?.split(',').map((value) => value.trim()) ?? []),
+            ];
+
+      if (
+        !origin ||
+        allowed === true ||
+        (Array.isArray(allowed) && allowed.includes(origin))
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
+    credentials: true,
+  });
+
   const prefix = config.get<string>('API_PREFIX') || 'api/v1';
   app.setGlobalPrefix(prefix);
+
+  const uploadPath = config.get<string>('UPLOAD_LOCAL_PATH') || './uploads';
+  app.useStaticAssets(join(process.cwd(), uploadPath), { prefix: '/uploads' });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -35,9 +66,6 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-
-  const reflector = app.get(Reflector);
-  app.useGlobalInterceptors(new ResponseInterceptor(reflector));
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Devsinn Insights API')

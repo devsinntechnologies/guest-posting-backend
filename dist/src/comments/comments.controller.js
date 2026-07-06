@@ -14,13 +14,13 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentsController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
 const comments_service_1 = require("./comments.service");
 const comments_dto_1 = require("./dto/comments.dto");
 const pagination_dto_1 = require("../common/dto/pagination.dto");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const roles_guard_1 = require("../common/guards/roles.guard");
+const optional_jwt_auth_guard_1 = require("../common/guards/optional-jwt-auth.guard");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const client_1 = require("@prisma/client");
 let CommentsController = class CommentsController {
@@ -33,6 +33,9 @@ let CommentsController = class CommentsController {
     }
     create(articleId, dto, userId) {
         return this.commentsService.create(articleId, dto, userId);
+    }
+    findPending(query) {
+        return this.commentsService.findPending(query);
     }
     moderate(id, dto) {
         return this.commentsService.moderate(id, dto);
@@ -54,6 +57,7 @@ __decorate([
 ], CommentsController.prototype, "findByArticle", null);
 __decorate([
     (0, roles_decorator_1.Public)(),
+    (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
     (0, common_1.Post)('articles/:articleId/comments'),
     (0, swagger_1.ApiOperation)({ summary: 'Submit comment (guest or authenticated)' }),
     __param(0, (0, common_1.Param)('articleId')),
@@ -64,9 +68,20 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], CommentsController.prototype, "create", null);
 __decorate([
+    (0, common_1.Get)('comments/pending'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'List pending comments for moderation' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [pagination_dto_1.PaginationDto]),
+    __metadata("design:returntype", void 0)
+], CommentsController.prototype, "findPending", null);
+__decorate([
     (0, common_1.Patch)('comments/:id/moderate'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.EDITOR),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Moderate comment' }),
     __param(0, (0, common_1.Param)('id')),
@@ -77,8 +92,8 @@ __decorate([
 ], CommentsController.prototype, "moderate", null);
 __decorate([
     (0, common_1.Delete)('comments/:id'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.EDITOR),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Soft delete comment' }),
     __param(0, (0, common_1.Param)('id')),

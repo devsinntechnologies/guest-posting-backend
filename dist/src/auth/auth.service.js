@@ -73,7 +73,7 @@ let AuthService = class AuthService {
                 name: dto.name,
                 email: dto.email,
                 password: hashed,
-                role: client_1.UserRole.CONTRIBUTOR,
+                role: client_1.UserRole.USER,
                 companyName: dto.companyName,
                 websiteUrl: dto.websiteUrl,
             },

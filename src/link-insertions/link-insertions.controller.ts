@@ -49,7 +49,7 @@ export class LinkInsertionsController {
 
   @Patch(':id/status')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update link insertion status (admin)' })
   updateStatus(
     @Param('id') id: string,

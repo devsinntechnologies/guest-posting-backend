@@ -21,6 +21,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { EmailModule } from './email/email.module';
 import { SeoModule } from './seo/seo.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { MediaModule } from './media/media.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -74,6 +75,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     EmailModule,
     SeoModule,
     DashboardModule,
+    MediaModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: HttpExceptionFilter },

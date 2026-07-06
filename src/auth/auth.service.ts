@@ -39,7 +39,7 @@ export class AuthService {
         name: dto.name,
         email: dto.email,
         password: hashed,
-        role: UserRole.CONTRIBUTOR,
+        role: UserRole.USER,
         companyName: dto.companyName,
         websiteUrl: dto.websiteUrl,
       },

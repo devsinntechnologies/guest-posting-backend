@@ -96,7 +96,7 @@ let CategoriesService = class CategoriesService {
         return this.prisma.category.update({ where: { id }, data });
     }
     async remove(id, role) {
-        if (role !== client_1.UserRole.SUPER_ADMIN) {
+        if (role !== client_1.UserRole.ADMIN) {
             throw new common_1.ForbiddenException('Only super admins can delete categories');
         }
         const category = await this.prisma.category.findUnique({ where: { id } });

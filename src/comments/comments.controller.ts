@@ -9,13 +9,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto, ModerateCommentDto } from './dto/comments.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Public, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 
@@ -35,6 +35,7 @@ export class CommentsController {
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Post('articles/:articleId/comments')
   @ApiOperation({ summary: 'Submit comment (guest or authenticated)' })
   create(
@@ -45,9 +46,18 @@ export class CommentsController {
     return this.commentsService.create(articleId, dto, userId);
   }
 
+  @Get('comments/pending')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List pending comments for moderation' })
+  findPending(@Query() query: PaginationDto) {
+    return this.commentsService.findPending(query);
+  }
+
   @Patch('comments/:id/moderate')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Moderate comment' })
   moderate(@Param('id') id: string, @Body() dto: ModerateCommentDto) {
@@ -55,8 +65,8 @@ export class CommentsController {
   }
 
   @Delete('comments/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN, UserRole.EDITOR)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Soft delete comment' })
   remove(@Param('id') id: string) {

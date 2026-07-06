@@ -30,6 +30,7 @@ const notifications_module_1 = require("./notifications/notifications.module");
 const email_module_1 = require("./email/email.module");
 const seo_module_1 = require("./seo/seo.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
+const media_module_1 = require("./media/media.module");
 const http_exception_filter_1 = require("./common/filters/http-exception.filter");
 const response_interceptor_1 = require("./common/interceptors/response.interceptor");
 const jwt_auth_guard_1 = require("./common/guards/jwt-auth.guard");
@@ -85,6 +86,7 @@ exports.AppModule = AppModule = __decorate([
             email_module_1.EmailModule,
             seo_module_1.SeoModule,
             dashboard_module_1.DashboardModule,
+            media_module_1.MediaModule,
         ],
         providers: [
             { provide: core_1.APP_FILTER, useClass: http_exception_filter_1.HttpExceptionFilter },

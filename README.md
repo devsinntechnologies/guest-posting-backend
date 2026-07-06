@@ -49,19 +49,68 @@ npm run start:dev
 - API: `http://localhost:3000/api/v1`
 - Swagger: `http://localhost:3000/api/docs`
 
-### Full Docker stack
+### Full Docker stack (nginx as API server)
+
+**Requires Docker only** — nginx listens on all interfaces (`0.0.0.0`) so other machines on your network can reach the API.
 
 ```bash
-docker compose up --build
+cd guest-posting-backend
+npm run serve
 ```
+
+This builds the app, runs postgres + redis, and starts **nginx on port 80** as the public entry point.
+
+| Endpoint | URL (this machine) |
+|----------|-------------------|
+| Swagger | http://localhost/api/docs |
+| API | http://localhost/api/v1 |
+| Uploads | http://localhost/uploads/ |
+
+**From another machine on the same Wi-Fi/LAN**, use the host's IP (printed by `npm run serve`):
+
+| Endpoint | URL (other machine) |
+|----------|---------------------|
+| Swagger | http://YOUR_LAN_IP/api/docs |
+| API | http://YOUR_LAN_IP/api/v1 |
+
+Set the frontend on that machine:
+
+```bash
+# devsinn-insight/.env.local
+NEXT_PUBLIC_API_BASE_URL=http://YOUR_LAN_IP/api/v1
+```
+
+Find your LAN IP: `ipconfig getifaddr en0` (Mac) or `hostname -I` (Linux).
+
+If port 80 is in use:
+
+```bash
+NGINX_PORT=8080 npm run serve
+# API: http://YOUR_LAN_IP:8080/api/v1
+```
+
+### Access from the public internet (any location)
+
+```bash
+npm run serve:remote
+```
+
+Creates a free Cloudflare tunnel URL (e.g. `https://xxxx.trycloudflare.com`).
+
+### Do NOT mix modes
+
+| Command | What it does |
+|---------|--------------|
+| `npm run serve` | Docker + nginx on port 80 — **use this as the server** |
+| `npm run start:dev` | NestJS only on port 3000 — local dev without nginx |
 
 ## Seed Credentials
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | admin@devsinn.com | Admin123! |
-| Editor | editor@devsinn.com | Editor123! |
+| Admin | admin@devsinn.com | Admin123! |
 | Contributor | contributor@devsinn.com | Contributor123! |
+| User | user@devsinn.com | User123! |
 
 ## Key API Endpoints
 

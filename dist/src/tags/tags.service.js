@@ -63,7 +63,7 @@ let TagsService = class TagsService {
         });
     }
     async remove(id, role) {
-        if (role !== client_1.UserRole.SUPER_ADMIN) {
+        if (role !== client_1.UserRole.ADMIN) {
             throw new common_1.ForbiddenException('Only super admins can delete tags');
         }
         const tag = await this.prisma.tag.findUnique({ where: { id } });

@@ -29,8 +29,8 @@ describe('RolesGuard', () => {
   it('allows access for matching role', () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue([UserRole.EDITOR]);
-    expect(guard.canActivate(createContext({ role: UserRole.EDITOR }))).toBe(
+      .mockReturnValue([UserRole.ADMIN]);
+    expect(guard.canActivate(createContext({ role: UserRole.ADMIN }))).toBe(
       true,
     );
   });
@@ -38,7 +38,7 @@ describe('RolesGuard', () => {
   it('denies access for non-matching role', () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue([UserRole.SUPER_ADMIN]);
+      .mockReturnValue([UserRole.ADMIN]);
     expect(() =>
       guard.canActivate(createContext({ role: UserRole.CONTRIBUTOR })),
     ).toThrow(ForbiddenException);
@@ -47,7 +47,7 @@ describe('RolesGuard', () => {
   it('denies access when user is missing', () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')
-      .mockReturnValue([UserRole.EDITOR]);
+      .mockReturnValue([UserRole.ADMIN]);
     expect(() => guard.canActivate(createContext(null))).toThrow(
       ForbiddenException,
     );

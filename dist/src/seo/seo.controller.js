@@ -78,7 +78,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('pages'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.EDITOR),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Create SEO page' }),
     __param(0, (0, common_1.Body)()),
@@ -89,7 +89,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)('pages/bulk-generate'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.EDITOR),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Bulk generate programmatic SEO pages' }),
     __param(0, (0, common_1.Body)()),
@@ -100,7 +100,7 @@ __decorate([
 __decorate([
     (0, common_1.Patch)('pages/:id'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN, client_1.UserRole.EDITOR),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Update SEO page meta' }),
     __param(0, (0, common_1.Param)('id')),

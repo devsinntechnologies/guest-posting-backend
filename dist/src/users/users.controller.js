@@ -70,7 +70,7 @@ __decorate([
 ], UsersController.prototype, "updateProfile", null);
 __decorate([
     (0, common_1.Get)(),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'List all users (admin)' }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
@@ -79,7 +79,7 @@ __decorate([
 ], UsersController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Get user by ID (admin)' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -88,7 +88,7 @@ __decorate([
 ], UsersController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Post)(),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Create user (admin)' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -97,7 +97,7 @@ __decorate([
 ], UsersController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Update user (admin)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -107,7 +107,7 @@ __decorate([
 ], UsersController.prototype, "adminUpdate", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiOperation)({ summary: 'Soft delete user (admin)' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, current_user_decorator_1.CurrentUser)('role')),

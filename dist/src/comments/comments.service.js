@@ -20,6 +20,30 @@ let CommentsService = class CommentsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async findPending(query) {
+        const page = query.page || 1;
+        const limit = query.limit || 20;
+        const skip = (0, pagination_dto_1.getSkip)(page, limit);
+        const where = {
+            status: client_1.CommentStatus.PENDING,
+            deletedAt: null,
+            parentCommentId: null,
+        };
+        const [items, total] = await Promise.all([
+            this.prisma.comment.findMany({
+                where,
+                skip,
+                take: limit,
+                include: {
+                    user: { select: { id: true, name: true, avatarUrl: true } },
+                    article: { select: { id: true, title: true, slug: true } },
+                },
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.comment.count({ where }),
+        ]);
+        return (0, pagination_dto_1.paginate)(items, total, page, limit);
+    }
     async findByArticle(articleId, query) {
         const page = query.page || 1;
         const limit = query.limit || 20;

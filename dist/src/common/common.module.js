@@ -11,13 +11,14 @@ const common_1 = require("@nestjs/common");
 const file_upload_service_1 = require("./services/file-upload.service");
 const roles_guard_1 = require("./guards/roles.guard");
 const ownership_guard_1 = require("./guards/ownership.guard");
+const optional_jwt_auth_guard_1 = require("./guards/optional-jwt-auth.guard");
 let CommonModule = class CommonModule {
 };
 exports.CommonModule = CommonModule;
 exports.CommonModule = CommonModule = __decorate([
     (0, common_1.Module)({
-        providers: [file_upload_service_1.FileUploadService, roles_guard_1.RolesGuard, ownership_guard_1.OwnershipGuard],
-        exports: [file_upload_service_1.FileUploadService, roles_guard_1.RolesGuard, ownership_guard_1.OwnershipGuard],
+        providers: [file_upload_service_1.FileUploadService, roles_guard_1.RolesGuard, ownership_guard_1.OwnershipGuard, optional_jwt_auth_guard_1.OptionalJwtAuthGuard],
+        exports: [file_upload_service_1.FileUploadService, roles_guard_1.RolesGuard, ownership_guard_1.OwnershipGuard, optional_jwt_auth_guard_1.OptionalJwtAuthGuard],
     })
 ], CommonModule);
 //# sourceMappingURL=common.module.js.map

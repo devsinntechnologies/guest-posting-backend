@@ -77,7 +77,7 @@ __decorate([
 __decorate([
     (0, common_1.Get)('admin/orders'),
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.SUPER_ADMIN),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Get all orders (admin)' }),
     __param(0, (0, common_1.Query)()),

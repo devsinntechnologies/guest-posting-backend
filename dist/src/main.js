@@ -5,6 +5,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const swagger_1 = require("@nestjs/swagger");
 const nestjs_pino_1 = require("nestjs-pino");
+const path_1 = require("path");
 const app_module_1 = require("./app.module");
 const response_interceptor_1 = require("./common/interceptors/response.interceptor");
 async function bootstrap() {
@@ -12,18 +13,35 @@ async function bootstrap() {
         rawBody: true,
         bufferLogs: true,
     });
-    app.enableCors({
-        origin: [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-        ],
-        credentials: true,
-    });
     app.useLogger(app.get(nestjs_pino_1.Logger));
     const config = app.get(config_1.ConfigService);
+    app.enableCors({
+        origin: (origin, callback) => {
+            const corsOrigins = config.get('CORS_ORIGINS');
+            const allowed = corsOrigins === '*'
+                ? true
+                : [
+                    'http://localhost',
+                    'http://localhost:80',
+                    'http://localhost:3000',
+                    'http://localhost:3001',
+                    'http://localhost:3002',
+                    ...(corsOrigins?.split(',').map((value) => value.trim()) ?? []),
+                ];
+            if (!origin ||
+                allowed === true ||
+                (Array.isArray(allowed) && allowed.includes(origin))) {
+                callback(null, true);
+                return;
+            }
+            callback(null, false);
+        },
+        credentials: true,
+    });
     const prefix = config.get('API_PREFIX') || 'api/v1';
     app.setGlobalPrefix(prefix);
+    const uploadPath = config.get('UPLOAD_LOCAL_PATH') || './uploads';
+    app.useStaticAssets((0, path_1.join)(process.cwd(), uploadPath), { prefix: '/uploads' });
     app.useGlobalPipes(new common_1.ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,

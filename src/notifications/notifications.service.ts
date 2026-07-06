@@ -71,7 +71,7 @@ export class NotificationsService {
 
     const editors = await this.prisma.user.findMany({
       where: {
-        role: { in: [UserRole.EDITOR, UserRole.SUPER_ADMIN] },
+        role: UserRole.ADMIN,
         isActive: true,
         deletedAt: null,
       },

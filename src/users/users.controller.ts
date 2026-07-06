@@ -46,35 +46,35 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'List all users (admin)' })
   findAll(@Query() query: PaginationDto) {
     return this.usersService.findAll(query);
   }
 
   @Get(':id')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get user by ID (admin)' })
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
 
   @Post()
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create user (admin)' })
   create(@Body() dto: CreateUserDto) {
     return this.usersService.adminCreate(dto);
   }
 
   @Patch(':id')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update user (admin)' })
   adminUpdate(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
     return this.usersService.adminUpdate(id, dto);
   }
 
   @Delete(':id')
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Soft delete user (admin)' })
   remove(@Param('id') id: string, @CurrentUser('role') role: UserRole) {
     return this.usersService.softDelete(id, role);

@@ -253,7 +253,7 @@ let ArticlesService = class ArticlesService {
         });
     }
     assertCanEdit(article, userId, userRole) {
-        if (userRole === client_1.UserRole.SUPER_ADMIN || userRole === client_1.UserRole.EDITOR) {
+        if (userRole === client_1.UserRole.ADMIN) {
             return;
         }
         if (article.authorId !== userId) {

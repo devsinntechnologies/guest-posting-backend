@@ -42,7 +42,7 @@ let OwnershipGuard = class OwnershipGuard {
         const user = request.user;
         if (!user)
             throw new common_1.ForbiddenException('Access denied');
-        if (user.role === client_1.UserRole.SUPER_ADMIN || user.role === client_1.UserRole.EDITOR) {
+        if (user.role === client_1.UserRole.ADMIN) {
             return true;
         }
         const id = request.params.id;

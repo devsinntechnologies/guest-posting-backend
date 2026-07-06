@@ -18,7 +18,7 @@ import {
   UpdateArticleStatusDto,
   ArticleQueryDto,
 } from './dto/articles.dto';
-import { Public, Cacheable } from '../common/decorators/roles.decorator';
+import { Public, Cacheable, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
@@ -44,6 +44,22 @@ export class ArticlesController {
     @Query() query: ArticleQueryDto,
   ) {
     return this.articlesService.mySubmissions(userId, query);
+  }
+
+  @Get('admin')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List all articles for admin/editor review' })
+  findAdmin(@Query() query: ArticleQueryDto) {
+    return this.articlesService.findAll(query, UserRole.ADMIN);
+  }
+
+  @Get('detail/:id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get article by ID (authenticated)' })
+  findById(@Param('id') id: string) {
+    return this.articlesService.findById(id);
   }
 
   @Public()

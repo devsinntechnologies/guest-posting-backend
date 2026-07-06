@@ -32,7 +32,7 @@ export class PackagesController {
 
   @Get('admin/all')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all packages (admin)' })
   findAllAdmin(@Query() query: PaginationDto) {
@@ -41,7 +41,7 @@ export class PackagesController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create package' })
   create(@Body() dto: CreatePackageDto) {
@@ -50,7 +50,7 @@ export class PackagesController {
 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update package' })
   update(@Param('id') id: string, @Body() dto: UpdatePackageDto) {
@@ -59,7 +59,7 @@ export class PackagesController {
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Deactivate package' })
   remove(@Param('id') id: string) {

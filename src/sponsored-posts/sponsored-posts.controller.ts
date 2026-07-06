@@ -36,7 +36,7 @@ export class SponsoredPostsController {
 
   @Get()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all sponsored posts' })
   findAll(@Query() query: PaginationDto) {
@@ -45,7 +45,7 @@ export class SponsoredPostsController {
 
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create sponsored post' })
   create(
@@ -57,7 +57,7 @@ export class SponsoredPostsController {
 
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update sponsored post' })
   update(@Param('id') id: string, @Body() dto: UpdateSponsoredPostDto) {
@@ -66,7 +66,7 @@ export class SponsoredPostsController {
 
   @Delete(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.SUPER_ADMIN)
+  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete sponsored post' })
   remove(@Param('id') id: string) {

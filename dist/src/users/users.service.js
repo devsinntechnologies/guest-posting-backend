@@ -156,7 +156,7 @@ let UsersService = class UsersService {
         });
     }
     async softDelete(id, actorRole) {
-        if (actorRole !== client_1.UserRole.SUPER_ADMIN) {
+        if (actorRole !== client_1.UserRole.ADMIN) {
             throw new common_1.ForbiddenException('Only super admins can delete users');
         }
         await this.findById(id);
