@@ -1,87 +1,98 @@
 import { UsersService } from './users.service';
-import { UpdateProfileDto, AdminUpdateUserDto, CreateUserDto } from './dto/users.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
-import { UserRole } from '@prisma/client';
+import { AdminUpdateUserDto, AdminUserQueryDto, ChangePasswordDto, UpdateProfileDto } from './dto/user.dto';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 export declare class UsersController {
-    private usersService;
+    private readonly usersService;
     constructor(usersService: UsersService);
-    getProfile(userId: string): Promise<{
-        id: string;
-        email: string;
-        name: string;
-        role: import("@prisma/client").$Enums.UserRole;
-        companyName: string | null;
-        websiteUrl: string | null;
-        avatarUrl: string | null;
-        isActive: boolean;
-        emailVerifiedAt: Date | null;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
-    updateProfile(userId: string, dto: UpdateProfileDto): Promise<{
-        id: string;
-        email: string;
-        name: string;
-        role: import("@prisma/client").$Enums.UserRole;
-        companyName: string | null;
-        websiteUrl: string | null;
-        avatarUrl: string | null;
-    }>;
-    findAll(query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
-        id: string;
-        email: string;
-        name: string;
-        role: import("@prisma/client").$Enums.UserRole;
-        companyName: string | null;
-        websiteUrl: string | null;
-        avatarUrl: string | null;
-        isActive: boolean;
-        emailVerifiedAt: Date | null;
-        createdAt: Date;
-    }>>;
-    findOne(id: string): Promise<{
-        id: string;
-        email: string;
-        name: string;
-        role: import("@prisma/client").$Enums.UserRole;
-        companyName: string | null;
-        websiteUrl: string | null;
-        avatarUrl: string | null;
-        isActive: boolean;
-        emailVerifiedAt: Date | null;
-        createdAt: Date;
-        updatedAt: Date;
-    }>;
-    create(dto: CreateUserDto): Promise<{
-        id: string;
-        email: string;
-        name: string;
-        role: import("@prisma/client").$Enums.UserRole;
-        createdAt: Date;
-    }>;
-    adminUpdate(id: string, dto: AdminUpdateUserDto): Promise<{
-        id: string;
-        email: string;
-        name: string;
-        role: import("@prisma/client").$Enums.UserRole;
-        companyName: string | null;
-        websiteUrl: string | null;
-        avatarUrl: string | null;
-        isActive: boolean;
-    }>;
-    remove(id: string, role: UserRole): Promise<{
+    findAll(query: AdminUserQueryDto): Promise<import("../common/dto/paginated-result.dto").PaginatedResult<Partial<{
         id: string;
         email: string;
         name: string;
         password: string;
         role: import("@prisma/client").$Enums.UserRole;
-        companyName: string | null;
-        websiteUrl: string | null;
         avatarUrl: string | null;
-        isActive: boolean;
+        bio: string | null;
+        website: string | null;
+        linkedin: string | null;
+        twitter: string | null;
         emailVerifiedAt: Date | null;
+        isActive: boolean;
         deletedAt: Date | null;
         createdAt: Date;
         updatedAt: Date;
+    }>>>;
+    getMe(user: JwtPayload): Promise<Partial<{
+        id: string;
+        email: string;
+        name: string;
+        password: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        avatarUrl: string | null;
+        bio: string | null;
+        website: string | null;
+        linkedin: string | null;
+        twitter: string | null;
+        emailVerifiedAt: Date | null;
+        isActive: boolean;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>>;
+    updateProfile(user: JwtPayload, dto: UpdateProfileDto): Promise<Partial<{
+        id: string;
+        email: string;
+        name: string;
+        password: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        avatarUrl: string | null;
+        bio: string | null;
+        website: string | null;
+        linkedin: string | null;
+        twitter: string | null;
+        emailVerifiedAt: Date | null;
+        isActive: boolean;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>>;
+    changePassword(user: JwtPayload, dto: ChangePasswordDto): Promise<{
+        message: string;
+    }>;
+    findById(id: string): Promise<Partial<{
+        id: string;
+        email: string;
+        name: string;
+        password: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        avatarUrl: string | null;
+        bio: string | null;
+        website: string | null;
+        linkedin: string | null;
+        twitter: string | null;
+        emailVerifiedAt: Date | null;
+        isActive: boolean;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>>;
+    adminUpdateUser(id: string, dto: AdminUpdateUserDto): Promise<Partial<{
+        id: string;
+        email: string;
+        name: string;
+        password: string;
+        role: import("@prisma/client").$Enums.UserRole;
+        avatarUrl: string | null;
+        bio: string | null;
+        website: string | null;
+        linkedin: string | null;
+        twitter: string | null;
+        emailVerifiedAt: Date | null;
+        isActive: boolean;
+        deletedAt: Date | null;
+        createdAt: Date;
+        updatedAt: Date;
+    }>>;
+    softDelete(admin: JwtPayload, id: string): Promise<{
+        message: string;
     }>;
 }

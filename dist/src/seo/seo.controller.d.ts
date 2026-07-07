@@ -1,70 +1,85 @@
 import { SeoService } from './seo.service';
-import { CreateSeoPageDto, BulkGenerateSeoDto, SeoPageQueryDto, UpdateSeoMetaDto } from './dto/seo.dto';
+import { CreateSeoPageDto, SeoPageQueryDto, UpdateSeoPageDto } from './dto/seo.dto';
 export declare class SeoController {
-    private seoService;
+    private readonly seoService;
     constructor(seoService: SeoService);
-    findAll(query: SeoPageQueryDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
+    findAll(query: SeoPageQueryDto): Promise<import("../common/dto/paginated-result.dto").PaginatedResult<{
         id: string;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         slug: string;
         metaTitle: string | null;
         metaDescription: string | null;
-        pageType: import("@prisma/client").$Enums.SeoPageType;
-        referenceId: string | null;
-        h1Heading: string | null;
-        customContent: string | null;
+        metaKeywords: string | null;
+        title: string;
+        categoryId: string | null;
+        type: import("@prisma/client").$Enums.SeoPageType;
+        ogImage: string | null;
+        canonicalUrl: string | null;
     }>>;
     findBySlug(slug: string): Promise<{
         id: string;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         slug: string;
         metaTitle: string | null;
         metaDescription: string | null;
-        pageType: import("@prisma/client").$Enums.SeoPageType;
-        referenceId: string | null;
-        h1Heading: string | null;
-        customContent: string | null;
+        metaKeywords: string | null;
+        title: string;
+        categoryId: string | null;
+        type: import("@prisma/client").$Enums.SeoPageType;
+        ogImage: string | null;
+        canonicalUrl: string | null;
     }>;
     getSitemapData(): Promise<{
-        articles: {
+        content: {
             loc: string;
             lastmod: Date;
             publishedAt: Date | null;
         }[];
+        categories: {
+            loc: string;
+            lastmod: Date;
+        }[];
         seoPages: {
             loc: string;
             lastmod: Date;
-            pageType: import("@prisma/client").$Enums.SeoPageType;
+            type: import("@prisma/client").$Enums.SeoPageType;
         }[];
     }>;
     create(dto: CreateSeoPageDto): Promise<{
         id: string;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         slug: string;
         metaTitle: string | null;
         metaDescription: string | null;
-        pageType: import("@prisma/client").$Enums.SeoPageType;
-        referenceId: string | null;
-        h1Heading: string | null;
-        customContent: string | null;
+        metaKeywords: string | null;
+        title: string;
+        categoryId: string | null;
+        type: import("@prisma/client").$Enums.SeoPageType;
+        ogImage: string | null;
+        canonicalUrl: string | null;
     }>;
-    bulkGenerate(dto: BulkGenerateSeoDto): Promise<{
-        created: number;
-        pages: unknown[];
-    }>;
-    update(id: string, dto: UpdateSeoMetaDto): Promise<{
+    update(id: string, dto: UpdateSeoPageDto): Promise<{
         id: string;
+        isActive: boolean;
         createdAt: Date;
         updatedAt: Date;
         slug: string;
         metaTitle: string | null;
         metaDescription: string | null;
-        pageType: import("@prisma/client").$Enums.SeoPageType;
-        referenceId: string | null;
-        h1Heading: string | null;
-        customContent: string | null;
+        metaKeywords: string | null;
+        title: string;
+        categoryId: string | null;
+        type: import("@prisma/client").$Enums.SeoPageType;
+        ogImage: string | null;
+        canonicalUrl: string | null;
+    }>;
+    delete(id: string): Promise<{
+        message: string;
     }>;
 }

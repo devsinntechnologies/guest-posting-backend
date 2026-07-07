@@ -1,93 +1,42 @@
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
-import { CheckoutDto } from './dto/payments.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
-import { NotificationsService } from '../notifications/notifications.service';
-import { EmailService } from '../email/email.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import type { PaymentProvider } from './interfaces/payment-provider.interface';
+import { AdminPaymentQueryDto, InitiatePaymentDto, PaymentQueryDto } from './dto/payment.dto';
+import { PaginatedResult } from '../common/dto/paginated-result.dto';
 export declare class PaymentsService {
-    private prisma;
-    private config;
-    private notifications;
-    private email;
-    private stripe;
-    constructor(prisma: PrismaService, config: ConfigService, notifications: NotificationsService, email: EmailService);
-    createCheckout(userId: string, dto: CheckoutDto): Promise<{
-        orderId: string;
+    private readonly prisma;
+    private readonly subscriptionsService;
+    private readonly provider;
+    constructor(prisma: PrismaService, subscriptionsService: SubscriptionsService, provider: PaymentProvider);
+    initiatePayment(userId: string, dto: InitiatePaymentDto): Promise<{
+        paymentId: string;
         checkoutUrl: string;
-        message: string;
-    } | {
-        orderId: string;
-        checkoutUrl: string | null;
-        message?: undefined;
     }>;
-    handleWebhook(payload: Buffer, signature: string): Promise<{
-        received: boolean;
-        duplicate: boolean;
+    processPaymentCompletion(providerTransactionId: string, status: 'COMPLETED' | 'FAILED', providerMetadata?: any): Promise<{
+        success: boolean;
+        alreadyProcessed: boolean;
+        status?: undefined;
     } | {
-        received: boolean;
-        duplicate?: undefined;
+        success: boolean;
+        status: string;
+        alreadyProcessed?: undefined;
     }>;
-    getMyOrders(userId: string, query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
-        package: {
-            id: string;
-            name: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            description: string | null;
-            price: import("@prisma/client/runtime/library").Decimal;
-            currency: string;
-            features: import("@prisma/client/runtime/library").JsonValue;
-            durationDays: number;
-        } | null;
-        article: {
-            id: string;
-            title: string;
-        } | null;
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        currency: string;
-        status: import("@prisma/client").$Enums.OrderStatus;
-        gatewayTransactionId: string | null;
-        userId: string;
-        packageId: string | null;
-        articleId: string | null;
-        amount: import("@prisma/client/runtime/library").Decimal;
-        paymentGateway: string;
-        invoiceUrl: string | null;
-    }>>;
-    getAllOrders(query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
-        user: {
-            id: string;
-            email: string;
-            name: string;
-        };
-        package: {
-            id: string;
-            name: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            description: string | null;
-            price: import("@prisma/client/runtime/library").Decimal;
-            currency: string;
-            features: import("@prisma/client/runtime/library").JsonValue;
-            durationDays: number;
-        } | null;
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        currency: string;
-        status: import("@prisma/client").$Enums.OrderStatus;
-        gatewayTransactionId: string | null;
-        userId: string;
-        packageId: string | null;
-        articleId: string | null;
-        amount: import("@prisma/client/runtime/library").Decimal;
-        paymentGateway: string;
-        invoiceUrl: string | null;
-    }>>;
+    handleWebhook(rawBody: Buffer, signature: string): Promise<{
+        received: boolean;
+        processed: boolean;
+    } | {
+        success: boolean;
+        alreadyProcessed: boolean;
+        status?: undefined;
+        received: boolean;
+        processed?: undefined;
+    } | {
+        success: boolean;
+        status: string;
+        alreadyProcessed?: undefined;
+        received: boolean;
+        processed?: undefined;
+    }>;
+    getMyPayments(userId: string, query: PaymentQueryDto): Promise<PaginatedResult<any>>;
+    adminGetAllPayments(query: AdminPaymentQueryDto): Promise<PaginatedResult<any>>;
 }

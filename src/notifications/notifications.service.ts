@@ -1,24 +1,26 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotificationType, UserRole } from '@prisma/client';
-import { PaginationDto, paginate, getSkip } from '../common/dto/pagination.dto';
-
-export interface CreateNotificationDto {
-  userId: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
+import { NotificationQueryDto } from './dto/notification.dto';
+import { NotificationType } from '@prisma/client';
+import {
+  createPaginatedResult,
+  PaginatedResult,
+} from '../common/dto/paginated-result.dto';
+import { getPrismaSkipTake } from '../common/utils/pagination.util';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(userId: string, query: PaginationDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const skip = getSkip(page, limit);
+  /**
+   * Get paginated notifications for current user.
+   */
+  async findAll(
+    userId: string,
+    query: NotificationQueryDto,
+  ): Promise<PaginatedResult<any>> {
+    const { page, limit } = query;
+    const { skip, take } = getPrismaSkipTake(page, limit);
 
     const where = { userId };
 
@@ -26,67 +28,82 @@ export class NotificationsService {
       this.prisma.notification.findMany({
         where,
         skip,
-        take: limit,
+        take,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.notification.count({ where }),
     ]);
 
-    return paginate(items, total, page, limit);
+    return createPaginatedResult(items, total, page, limit);
   }
 
+  /**
+   * Mark a notification as read.
+   */
   async markAsRead(id: string, userId: string) {
-    return this.prisma.notification.updateMany({
+    const notification = await this.prisma.notification.findFirst({
       where: { id, userId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found.');
+    }
+
+    return this.prisma.notification.update({
+      where: { id },
       data: { isRead: true },
     });
   }
 
-  async create(dto: CreateNotificationDto) {
+  /**
+   * Mark all notifications for the user as read.
+   */
+  async markAllAsRead(userId: string) {
+    await this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true },
+    });
+
+    return { message: 'All notifications marked as read.' };
+  }
+
+  /**
+   * Delete a notification.
+   */
+  async delete(id: string, userId: string) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, userId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found.');
+    }
+
+    await this.prisma.notification.delete({
+      where: { id },
+    });
+
+    return { message: 'Notification deleted successfully.' };
+  }
+
+  /**
+   * Helper: Create notification (internal).
+   */
+  async create(dto: {
+    userId: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    metadata?: any;
+  }) {
     return this.prisma.notification.create({
       data: {
         userId: dto.userId,
         type: dto.type,
         title: dto.title,
         message: dto.message,
-        metadata: dto.metadata as object,
+        metadata: dto.metadata || null,
       },
     });
-  }
-
-  async notifySubmissionReceived(articleId: string, authorId: string) {
-    const article = await this.prisma.article.findUnique({
-      where: { id: articleId },
-      include: { author: true },
-    });
-    if (!article) return;
-
-    await this.create({
-      userId: authorId,
-      type: NotificationType.SUBMISSION_RECEIVED,
-      title: 'Submission Received',
-      message: `Your article "${article.title}" has been submitted for review.`,
-      metadata: { articleId },
-    });
-
-    const editors = await this.prisma.user.findMany({
-      where: {
-        role: UserRole.ADMIN,
-        isActive: true,
-        deletedAt: null,
-      },
-    });
-
-    await Promise.all(
-      editors.map((editor) =>
-        this.create({
-          userId: editor.id,
-          type: NotificationType.SUBMISSION_RECEIVED,
-          title: 'New Submission',
-          message: `New article "${article.title}" submitted by ${article.author.name}.`,
-          metadata: { articleId, authorId },
-        }),
-      ),
-    );
   }
 }

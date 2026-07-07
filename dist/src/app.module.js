@@ -17,18 +17,19 @@ const prisma_module_1 = require("./prisma/prisma.module");
 const common_module_1 = require("./common/common.module");
 const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
-const articles_module_1 = require("./articles/articles.module");
+const content_module_1 = require("./content/content.module");
 const categories_module_1 = require("./categories/categories.module");
-const tags_module_1 = require("./tags/tags.module");
 const comments_module_1 = require("./comments/comments.module");
-const workflow_module_1 = require("./workflow/workflow.module");
-const packages_module_1 = require("./packages/packages.module");
+const likes_module_1 = require("./likes/likes.module");
+const subscriptions_module_1 = require("./subscriptions/subscriptions.module");
 const payments_module_1 = require("./payments/payments.module");
-const sponsored_posts_module_1 = require("./sponsored-posts/sponsored-posts.module");
-const link_insertions_module_1 = require("./link-insertions/link-insertions.module");
+const review_module_1 = require("./review/review.module");
 const notifications_module_1 = require("./notifications/notifications.module");
 const email_module_1 = require("./email/email.module");
 const seo_module_1 = require("./seo/seo.module");
+const settings_module_1 = require("./settings/settings.module");
+const contact_module_1 = require("./contact/contact.module");
+const newsletter_module_1 = require("./newsletter/newsletter.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const media_module_1 = require("./media/media.module");
 const http_exception_filter_1 = require("./common/filters/http-exception.filter");
@@ -73,18 +74,19 @@ exports.AppModule = AppModule = __decorate([
             common_module_1.CommonModule,
             auth_module_1.AuthModule,
             users_module_1.UsersModule,
-            articles_module_1.ArticlesModule,
+            content_module_1.ContentModule,
             categories_module_1.CategoriesModule,
-            tags_module_1.TagsModule,
             comments_module_1.CommentsModule,
-            workflow_module_1.WorkflowModule,
-            packages_module_1.PackagesModule,
+            likes_module_1.LikesModule,
+            subscriptions_module_1.SubscriptionsModule,
             payments_module_1.PaymentsModule,
-            sponsored_posts_module_1.SponsoredPostsModule,
-            link_insertions_module_1.LinkInsertionsModule,
+            review_module_1.ReviewModule,
             notifications_module_1.NotificationsModule,
             email_module_1.EmailModule,
             seo_module_1.SeoModule,
+            settings_module_1.SettingsModule,
+            contact_module_1.ContactModule,
+            newsletter_module_1.NewsletterModule,
             dashboard_module_1.DashboardModule,
             media_module_1.MediaModule,
         ],

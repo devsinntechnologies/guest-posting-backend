@@ -1,100 +1,73 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { UserRole, ArticleStatus, OrderStatus } from '@prisma/client';
+import { ContentStatus, PaymentStatus } from '@prisma/client';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async getStats(userId: string, role: UserRole) {
-    if (role === UserRole.CONTRIBUTOR) {
-      return this.getContributorStats(userId);
-    }
-    return this.getAdminStats();
-  }
-
-  private async getContributorStats(userId: string) {
-    const [submissions, byStatus, orders] = await Promise.all([
-      this.prisma.article.count({
-        where: { authorId: userId, deletedAt: null },
-      }),
-      this.prisma.article.groupBy({
-        by: ['status'],
-        where: { authorId: userId, deletedAt: null },
-        _count: true,
-      }),
-      this.prisma.order.count({
-        where: { userId, status: OrderStatus.PAID },
-      }),
-    ]);
-
-    return {
-      totalSubmissions: submissions,
-      submissionsByStatus: byStatus.reduce(
-        (acc, item) => {
-          acc[item.status] = item._count;
-          return acc;
-        },
-        {} as Record<string, number>,
-      ),
-      paidOrders: orders,
-    };
-  }
-
-  private async getAdminStats() {
+  /**
+   * ADMIN: Get aggregate statistics of the platform.
+   */
+  async getAdminStats() {
     const [
-      totalArticles,
-      pendingReview,
-      published,
+      publishedContent,
+      pendingReviewContent,
       totalUsers,
-      revenue,
-      topArticles,
-      recentSubmissions,
+      totalSubscriptions,
+      completedPayments,
+      totalComments,
     ] = await Promise.all([
-      this.prisma.article.count({ where: { deletedAt: null } }),
-      this.prisma.article.count({
-        where: { status: ArticleStatus.PENDING_REVIEW, deletedAt: null },
+      // Published Content
+      this.prisma.content.count({
+        where: { status: ContentStatus.PUBLISHED, deletedAt: null },
       }),
-      this.prisma.article.count({
-        where: { status: ArticleStatus.PUBLISHED, deletedAt: null },
+      // Pending Review Content
+      this.prisma.content.count({
+        where: { status: ContentStatus.PENDING_REVIEW, deletedAt: null },
       }),
-      this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.order.aggregate({
-        where: { status: OrderStatus.PAID },
+      // Active Users
+      this.prisma.user.count({
+        where: { isActive: true, deletedAt: null },
+      }),
+      // Total active subscriptions
+      this.prisma.subscription.count(),
+      // Revenue aggregate
+      this.prisma.payment.aggregate({
+        where: { status: PaymentStatus.COMPLETED },
         _sum: { amount: true },
         _count: true,
       }),
-      this.prisma.article.findMany({
-        where: { status: ArticleStatus.PUBLISHED, deletedAt: null },
-        orderBy: { viewCount: 'desc' },
-        take: 10,
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          viewCount: true,
-          publishedAt: true,
-        },
-      }),
-      this.prisma.article.count({
-        where: {
-          createdAt: { gte: new Date(Date.now() - 30 * 86400000) },
-          deletedAt: null,
-        },
+      // Comments
+      this.prisma.comment.count({
+        where: { deletedAt: null },
       }),
     ]);
 
     return {
-      totalArticles,
-      pendingReview,
-      published,
+      publishedContent,
+      pendingReviewContent,
       totalUsers,
+      totalSubscriptions,
       revenue: {
-        total: revenue._sum.amount || 0,
-        orderCount: revenue._count,
+        totalAmount: completedPayments._sum.amount || 0,
+        completedCount: completedPayments._count,
       },
-      topArticles,
-      submissionsLast30Days: recentSubmissions,
+      totalComments,
     };
+  }
+
+  /**
+   * ADMIN: Get recent activity logs (e.g., review events).
+   */
+  async getRecentActivity(limit = 15) {
+    return this.prisma.reviewEvent.findMany({
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        actor: { select: { id: true, name: true, role: true } },
+        content: { select: { id: true, title: true, slug: true } },
+      },
+    });
   }
 }

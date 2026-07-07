@@ -8,18 +8,19 @@ import { PrismaModule } from './prisma/prisma.module';
 import { CommonModule } from './common/common.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { ArticlesModule } from './articles/articles.module';
+import { ContentModule } from './content/content.module';
 import { CategoriesModule } from './categories/categories.module';
-import { TagsModule } from './tags/tags.module';
 import { CommentsModule } from './comments/comments.module';
-import { WorkflowModule } from './workflow/workflow.module';
-import { PackagesModule } from './packages/packages.module';
+import { LikesModule } from './likes/likes.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { PaymentsModule } from './payments/payments.module';
-import { SponsoredPostsModule } from './sponsored-posts/sponsored-posts.module';
-import { LinkInsertionsModule } from './link-insertions/link-insertions.module';
+import { ReviewModule } from './review/review.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { EmailModule } from './email/email.module';
 import { SeoModule } from './seo/seo.module';
+import { SettingsModule } from './settings/settings.module';
+import { ContactModule } from './contact/contact.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { MediaModule } from './media/media.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -62,18 +63,19 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     CommonModule,
     AuthModule,
     UsersModule,
-    ArticlesModule,
+    ContentModule,
     CategoriesModule,
-    TagsModule,
     CommentsModule,
-    WorkflowModule,
-    PackagesModule,
+    LikesModule,
+    SubscriptionsModule,
     PaymentsModule,
-    SponsoredPostsModule,
-    LinkInsertionsModule,
+    ReviewModule,
     NotificationsModule,
     EmailModule,
     SeoModule,
+    SettingsModule,
+    ContactModule,
+    NewsletterModule,
     DashboardModule,
     MediaModule,
   ],

@@ -13,96 +13,175 @@ exports.CategoriesService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const slug_util_1 = require("../common/utils/slug.util");
-const pagination_dto_1 = require("../common/dto/pagination.dto");
-const client_1 = require("@prisma/client");
+const paginated_result_dto_1 = require("../common/dto/paginated-result.dto");
+const pagination_util_1 = require("../common/utils/pagination.util");
 let CategoriesService = class CategoriesService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async findAll(query) {
-        const page = query.page || 1;
-        const limit = query.limit || 20;
-        const skip = (0, pagination_dto_1.getSkip)(page, limit);
+    async create(dto) {
+        if (dto.parentCategoryId) {
+            const parent = await this.prisma.category.findUnique({
+                where: { id: dto.parentCategoryId },
+            });
+            if (!parent) {
+                throw new common_1.NotFoundException('Parent category not found.');
+            }
+        }
+        const baseSlug = (0, slug_util_1.generateSlug)(dto.name);
+        let slug = baseSlug;
+        const existing = await this.prisma.category.findUnique({ where: { slug } });
+        if (existing) {
+            slug = (0, slug_util_1.generateUniqueSlug)(dto.name);
+        }
+        return this.prisma.category.create({
+            data: {
+                name: dto.name,
+                slug,
+                description: dto.description,
+                metaTitle: dto.metaTitle,
+                metaDescription: dto.metaDescription,
+                metaKeywords: dto.metaKeywords,
+                parentCategoryId: dto.parentCategoryId,
+                isActive: dto.isActive ?? true,
+            },
+        });
+    }
+    async findAll(query, onlyActive = false) {
+        const { page, limit, search, parentCategoryId, isActive } = query;
+        const { skip, take } = (0, pagination_util_1.getPrismaSkipTake)(page, limit);
+        const where = {
+            ...(search && {
+                name: { contains: search, mode: 'insensitive' },
+            }),
+            ...(parentCategoryId !== undefined && { parentCategoryId }),
+            ...(onlyActive && { isActive: true }),
+            ...(isActive !== undefined && !onlyActive && { isActive }),
+        };
         const [items, total] = await Promise.all([
             this.prisma.category.findMany({
-                skip,
-                take: limit,
+                where,
                 include: {
-                    childCategories: true,
-                    parentCategory: { select: { id: true, name: true, slug: true } },
-                    _count: { select: { articles: true } },
+                    childCategories: {
+                        where: onlyActive ? { isActive: true } : undefined,
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                            isActive: true,
+                            parentCategoryId: true,
+                        },
+                    },
+                    parentCategory: {
+                        select: { id: true, name: true, slug: true },
+                    },
                 },
+                skip,
+                take,
                 orderBy: { name: 'asc' },
             }),
-            this.prisma.category.count(),
+            this.prisma.category.count({ where }),
         ]);
-        return (0, pagination_dto_1.paginate)(items, total, page, limit);
+        return (0, paginated_result_dto_1.createPaginatedResult)(items, total, page, limit);
     }
     async findBySlug(slug) {
         const category = await this.prisma.category.findUnique({
             where: { slug },
             include: {
-                parentCategory: true,
-                childCategories: true,
+                childCategories: {
+                    where: { isActive: true },
+                    select: { id: true, name: true, slug: true },
+                },
+                parentCategory: {
+                    select: { id: true, name: true, slug: true },
+                },
             },
         });
-        if (!category)
-            throw new common_1.NotFoundException('Category not found');
+        if (!category) {
+            throw new common_1.NotFoundException('Category not found.');
+        }
         return category;
     }
-    async getArticlesBySlug(slug, query) {
-        const category = await this.findBySlug(slug);
-        const page = query.page || 1;
-        const limit = query.limit || 20;
-        const skip = (0, pagination_dto_1.getSkip)(page, limit);
-        const where = {
-            categoryId: category.id,
-            status: client_1.ArticleStatus.PUBLISHED,
-            deletedAt: null,
-        };
-        const [items, total] = await Promise.all([
-            this.prisma.article.findMany({
-                where,
-                skip,
-                take: limit,
-                orderBy: { publishedAt: 'desc' },
-                include: {
-                    author: { select: { id: true, name: true } },
+    async findById(id) {
+        const category = await this.prisma.category.findUnique({
+            where: { id },
+            include: {
+                childCategories: {
+                    select: { id: true, name: true, slug: true, isActive: true },
                 },
-            }),
-            this.prisma.article.count({ where }),
-        ]);
-        return (0, pagination_dto_1.paginate)(items, total, page, limit);
-    }
-    async create(dto) {
-        const baseSlug = (0, slug_util_1.generateSlug)(dto.name);
-        const slug = await (0, slug_util_1.ensureUniqueSlug)(baseSlug, async (s) => {
-            return !!(await this.prisma.category.findUnique({ where: { slug: s } }));
+                parentCategory: {
+                    select: { id: true, name: true, slug: true },
+                },
+            },
         });
-        return this.prisma.category.create({
-            data: { ...dto, slug },
-        });
+        if (!category) {
+            throw new common_1.NotFoundException('Category not found.');
+        }
+        return category;
     }
     async update(id, dto) {
         const category = await this.prisma.category.findUnique({ where: { id } });
-        if (!category)
-            throw new common_1.NotFoundException('Category not found');
-        const data = { ...dto };
-        if (dto.name) {
-            const baseSlug = (0, slug_util_1.generateSlug)(dto.name);
-            data.slug = await (0, slug_util_1.ensureUniqueSlug)(baseSlug, async (s) => !!(await this.prisma.category.findUnique({ where: { slug: s } })), category.slug);
+        if (!category) {
+            throw new common_1.NotFoundException('Category not found.');
         }
-        return this.prisma.category.update({ where: { id }, data });
+        if (dto.parentCategoryId) {
+            if (dto.parentCategoryId === id) {
+                throw new common_1.BadRequestException('A category cannot be its own parent.');
+            }
+            const parent = await this.prisma.category.findUnique({
+                where: { id: dto.parentCategoryId },
+            });
+            if (!parent) {
+                throw new common_1.NotFoundException('Parent category not found.');
+            }
+        }
+        let slug = category.slug;
+        if (dto.name && dto.name !== category.name) {
+            const newBase = (0, slug_util_1.generateSlug)(dto.name);
+            const conflict = await this.prisma.category.findUnique({
+                where: { slug: newBase },
+            });
+            slug = conflict ? (0, slug_util_1.generateUniqueSlug)(dto.name) : newBase;
+        }
+        return this.prisma.category.update({
+            where: { id },
+            data: {
+                ...(dto.name && { name: dto.name, slug }),
+                ...(dto.description !== undefined && { description: dto.description }),
+                ...(dto.metaTitle !== undefined && { metaTitle: dto.metaTitle }),
+                ...(dto.metaDescription !== undefined && {
+                    metaDescription: dto.metaDescription,
+                }),
+                ...(dto.metaKeywords !== undefined && {
+                    metaKeywords: dto.metaKeywords,
+                }),
+                ...(dto.parentCategoryId !== undefined && {
+                    parentCategoryId: dto.parentCategoryId,
+                }),
+                ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+            },
+        });
     }
-    async remove(id, role) {
-        if (role !== client_1.UserRole.ADMIN) {
-            throw new common_1.ForbiddenException('Only super admins can delete categories');
+    async delete(id) {
+        const category = await this.prisma.category.findUnique({
+            where: { id },
+            include: { childCategories: { take: 1 } },
+        });
+        if (!category) {
+            throw new common_1.NotFoundException('Category not found.');
         }
-        const category = await this.prisma.category.findUnique({ where: { id } });
-        if (!category)
-            throw new common_1.NotFoundException('Category not found');
-        return this.prisma.category.delete({ where: { id } });
+        if (category.childCategories.length > 0) {
+            throw new common_1.ConflictException('Cannot delete a category that has sub-categories. Remove them first.');
+        }
+        const contentCount = await this.prisma.content.count({
+            where: { categoryId: id, deletedAt: null },
+        });
+        if (contentCount > 0) {
+            throw new common_1.ConflictException(`Cannot delete a category that has ${contentCount} content item(s) associated with it.`);
+        }
+        await this.prisma.category.delete({ where: { id } });
+        return { message: 'Category deleted successfully.' };
     }
 };
 exports.CategoriesService = CategoriesService;

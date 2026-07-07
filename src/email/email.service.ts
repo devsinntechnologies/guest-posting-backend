@@ -16,16 +16,40 @@ export interface EmailJobData {
 }
 
 const TEMPLATES: Record<string, (data: Record<string, string>) => string> = {
-  submission_received: (d) =>
-    `<h1>Submission Received</h1><p>Hi ${d.name}, your article "${d.title}" has been submitted for review.</p>`,
-  article_published: (d) =>
-    `<h1>Your Article is Live!</h1><p>Hi ${d.name}, your article "${d.title}" is now published at ${d.url}.</p>`,
-  article_rejected: (d) =>
-    `<h1>Article Rejected</h1><p>Hi ${d.name}, your article "${d.title}" was rejected. Reason: ${d.reason}</p>`,
-  payment_confirmed: (d) =>
-    `<h1>Payment Confirmed</h1><p>Hi ${d.name}, your payment of ${d.amount} ${d.currency} was confirmed.</p>`,
+  verify_email: (d) =>
+    `<h1>Verify Your Email</h1>` +
+    `<p>Hi ${d.name},</p>` +
+    `<p>Please verify your email address by clicking the link below:</p>` +
+    `<p><a href="${d.url}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a></p>` +
+    `<p>Alternatively, copy and paste this link in your browser: ${d.url}</p>` +
+    `<p>If you did not request this, please ignore this email.</p>`,
+
   password_reset: (d) =>
-    `<h1>Password Reset</h1><p>Click <a href="${d.url}">here</a> to reset your password.</p>`,
+    `<h1>Reset Your Password</h1>` +
+    `<p>Hi ${d.name},</p>` +
+    `<p>You requested to reset your password. Please click the link below to set a new password:</p>` +
+    `<p><a href="${d.url}" style="padding: 10px 20px; background-color: #008CBA; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a></p>` +
+    `<p>Or copy this link: ${d.url}</p>` +
+    `<p>This link is valid for 1 hour. If you did not request a reset, you can safely ignore this email.</p>`,
+
+  welcome: (d) =>
+    `<h1>Welcome to Devsinn Insights!</h1>` +
+    `<p>Hi ${d.name},</p>` +
+    `<p>Thank you for registering at Devsinn Insights — a moderated publishing platform.</p>` +
+    `<p>To start publishing articles, please navigate to your dashboard and purchase a subscription plan.</p>`,
+
+  payment_confirmed: (d) =>
+    `<h1>Payment Confirmed</h1>` +
+    `<p>Hi ${d.name},</p>` +
+    `<p>We have successfully received your payment of ${d.amount} ${d.currency}.</p>` +
+    `<p>Your subscription plan is now active. You can now create content drafts in your dashboard!</p>`,
+
+  content_status_change: (d) =>
+    `<h1>Content Status Update</h1>` +
+    `<p>Hi ${d.name},</p>` +
+    `<p>Your content draft titled "<strong>${d.title}</strong>" has been updated to status: <strong>${d.status}</strong>.</p>` +
+    `${d.note ? `<p><strong>Reviewer feedback:</strong> ${d.note}</p>` : ''}` +
+    `<p>Login to your account to review details.</p>`,
 };
 
 @Injectable()
@@ -34,20 +58,23 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor(
-    private config: ConfigService,
-    private prisma: PrismaService,
-    @InjectQueue('email') private emailQueue: Queue,
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+    @InjectQueue('email') private readonly emailQueue: Queue,
   ) {
     this.transporter = nodemailer.createTransport({
-      host: this.config.get('SMTP_HOST'),
-      port: this.config.get<number>('SMTP_PORT') || 587,
+      host: this.config.get('SMTP_HOST') || 'localhost',
+      port: this.config.get<number>('SMTP_PORT') || 1025,
       auth: {
-        user: this.config.get('SMTP_USER'),
-        pass: this.config.get('SMTP_PASS'),
+        user: this.config.get('SMTP_USER') || '',
+        pass: this.config.get('SMTP_PASS') || '',
       },
     });
   }
 
+  /**
+   * Add email request to queue and log.
+   */
   async queueEmail(
     to: string,
     templateName: string,
@@ -71,11 +98,16 @@ export class EmailService {
       subject,
       html,
       emailLogId: log.id,
-    } satisfies EmailJobData);
+    } satisfies EmailJobData).catch((err) => {
+      this.logger.error(`BullMQ queue error: ${err.message}`);
+    });
 
     return log;
   }
 
+  /**
+   * Process email dispatch.
+   */
   async sendDirect(job: EmailJobData) {
     try {
       await this.transporter.sendMail({
@@ -92,7 +124,7 @@ export class EmailService {
         });
       }
     } catch (error) {
-      this.logger.error(`Email send failed: ${error}`);
+      this.logger.error(`Email send failed to ${job.to}: ${error}`);
       if (job.emailLogId) {
         await this.prisma.emailLog.update({
           where: { id: job.emailLogId },
@@ -109,7 +141,7 @@ export class EmailService {
 
 @Processor('email')
 export class EmailProcessor extends WorkerHost {
-  constructor(private emailService: EmailService) {
+  constructor(private readonly emailService: EmailService) {
     super();
   }
 

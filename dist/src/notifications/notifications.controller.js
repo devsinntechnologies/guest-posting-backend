@@ -14,46 +14,70 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
 const notifications_service_1 = require("./notifications.service");
-const pagination_dto_1 = require("../common/dto/pagination.dto");
+const notification_dto_1 = require("./dto/notification.dto");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 let NotificationsController = class NotificationsController {
     notificationsService;
     constructor(notificationsService) {
         this.notificationsService = notificationsService;
     }
-    findAll(userId, query) {
-        return this.notificationsService.findAll(userId, query);
+    findAll(user, query) {
+        return this.notificationsService.findAll(user.sub, query);
     }
-    markAsRead(id, userId) {
-        return this.notificationsService.markAsRead(id, userId);
+    markAllAsRead(user) {
+        return this.notificationsService.markAllAsRead(user.sub);
+    }
+    markAsRead(id, user) {
+        return this.notificationsService.markAsRead(id, user.sub);
+    }
+    delete(id, user) {
+        return this.notificationsService.delete(id, user.sub);
     }
 };
 exports.NotificationsController = NotificationsController;
 __decorate([
     (0, common_1.Get)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get user notifications' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)('sub')),
+    (0, swagger_1.ApiOperation)({ summary: 'USER — Get own notifications' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, pagination_dto_1.PaginationDto]),
+    __metadata("design:paramtypes", [Object, notification_dto_1.NotificationQueryDto]),
     __metadata("design:returntype", void 0)
 ], NotificationsController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Patch)(':id/read'),
-    (0, swagger_1.ApiOperation)({ summary: 'Mark notification as read' }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, current_user_decorator_1.CurrentUser)('sub')),
+    (0, common_1.Patch)('read-all'),
+    (0, swagger_1.ApiOperation)({ summary: 'USER — Mark all notifications as read' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "markAllAsRead", null);
+__decorate([
+    (0, common_1.Patch)(':id/read'),
+    (0, swagger_1.ApiOperation)({ summary: 'USER — Mark notification as read' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Notification UUID' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], NotificationsController.prototype, "markAsRead", null);
+__decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'USER — Delete a notification' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Notification UUID' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], NotificationsController.prototype, "delete", null);
 exports.NotificationsController = NotificationsController = __decorate([
     (0, swagger_1.ApiTags)('Notifications'),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     (0, common_1.Controller)('notifications'),
     __metadata("design:paramtypes", [notifications_service_1.NotificationsService])
 ], NotificationsController);

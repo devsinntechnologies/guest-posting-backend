@@ -1,33 +1,69 @@
 import {
   Controller,
+  Delete,
   Get,
-  Patch,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
   Query,
-  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { NotificationQueryDto } from './dto/notification.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) {}
 
+  /**
+   * Get own notifications.
+   */
   @Get()
-  @ApiOperation({ summary: 'Get user notifications' })
-  findAll(@CurrentUser('sub') userId: string, @Query() query: PaginationDto) {
-    return this.notificationsService.findAll(userId, query);
+  @ApiOperation({ summary: 'USER — Get own notifications' })
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: NotificationQueryDto,
+  ) {
+    return this.notificationsService.findAll(user.sub, query);
   }
 
+  /**
+   * Mark all user notifications as read.
+   */
+  @Patch('read-all')
+  @ApiOperation({ summary: 'USER — Mark all notifications as read' })
+  markAllAsRead(@CurrentUser() user: JwtPayload) {
+    return this.notificationsService.markAllAsRead(user.sub);
+  }
+
+  /**
+   * Mark a notification as read.
+   */
   @Patch(':id/read')
-  @ApiOperation({ summary: 'Mark notification as read' })
-  markAsRead(@Param('id') id: string, @CurrentUser('sub') userId: string) {
-    return this.notificationsService.markAsRead(id, userId);
+  @ApiOperation({ summary: 'USER — Mark notification as read' })
+  @ApiParam({ name: 'id', description: 'Notification UUID' })
+  markAsRead(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.notificationsService.markAsRead(id, user.sub);
+  }
+
+  /**
+   * Delete a notification.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'USER — Delete a notification' })
+  @ApiParam({ name: 'id', description: 'Notification UUID' })
+  delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.notificationsService.delete(id, user.sub);
   }
 }

@@ -8,17 +8,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommonModule = void 0;
 const common_1 = require("@nestjs/common");
-const file_upload_service_1 = require("./services/file-upload.service");
 const roles_guard_1 = require("./guards/roles.guard");
-const ownership_guard_1 = require("./guards/ownership.guard");
-const optional_jwt_auth_guard_1 = require("./guards/optional-jwt-auth.guard");
+const subscription_guard_1 = require("./guards/subscription.guard");
+const redis_service_1 = require("./services/redis.service");
+const prisma_module_1 = require("../prisma/prisma.module");
 let CommonModule = class CommonModule {
 };
 exports.CommonModule = CommonModule;
 exports.CommonModule = CommonModule = __decorate([
     (0, common_1.Module)({
-        providers: [file_upload_service_1.FileUploadService, roles_guard_1.RolesGuard, ownership_guard_1.OwnershipGuard, optional_jwt_auth_guard_1.OptionalJwtAuthGuard],
-        exports: [file_upload_service_1.FileUploadService, roles_guard_1.RolesGuard, ownership_guard_1.OwnershipGuard, optional_jwt_auth_guard_1.OptionalJwtAuthGuard],
+        imports: [prisma_module_1.PrismaModule],
+        providers: [roles_guard_1.RolesGuard, subscription_guard_1.SubscriptionGuard, redis_service_1.RedisService],
+        exports: [roles_guard_1.RolesGuard, subscription_guard_1.SubscriptionGuard, redis_service_1.RedisService],
     })
 ], CommonModule);
 //# sourceMappingURL=common.module.js.map

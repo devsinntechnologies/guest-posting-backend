@@ -70,7 +70,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Devsinn Insights API')
     .setDescription(
-      'REST API for Devsinn Insights — guest posting and SEO content publishing platform',
+      'REST API for Devsinn Insights — moderated publishing and content creation platform',
     )
     .setVersion('1.0')
     .addBearerAuth()

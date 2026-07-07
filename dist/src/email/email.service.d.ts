@@ -10,15 +10,16 @@ export interface EmailJobData {
     emailLogId?: string;
 }
 export declare class EmailService {
-    private config;
-    private prisma;
-    private emailQueue;
+    private readonly config;
+    private readonly prisma;
+    private readonly emailQueue;
     private readonly logger;
     private transporter;
     constructor(config: ConfigService, prisma: PrismaService, emailQueue: Queue);
     queueEmail(to: string, templateName: string, subject: string, data: Record<string, string>): Promise<{
         id: string;
         createdAt: Date;
+        updatedAt: Date;
         status: import("@prisma/client").$Enums.EmailLogStatus;
         subject: string;
         toEmail: string;
@@ -29,7 +30,7 @@ export declare class EmailService {
     sendDirect(job: EmailJobData): Promise<void>;
 }
 export declare class EmailProcessor extends WorkerHost {
-    private emailService;
+    private readonly emailService;
     constructor(emailService: EmailService);
     process(job: Job<EmailJobData>): Promise<void>;
 }

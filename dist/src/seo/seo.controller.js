@@ -14,13 +14,12 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SeoController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
+const client_1 = require("@prisma/client");
 const seo_service_1 = require("./seo.service");
 const seo_dto_1 = require("./dto/seo.dto");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const roles_guard_1 = require("../common/guards/roles.guard");
-const client_1 = require("@prisma/client");
 let SeoController = class SeoController {
     seoService;
     constructor(seoService) {
@@ -38,79 +37,80 @@ let SeoController = class SeoController {
     create(dto) {
         return this.seoService.create(dto);
     }
-    bulkGenerate(dto) {
-        return this.seoService.bulkGenerate(dto);
-    }
     update(id, dto) {
         return this.seoService.update(id, dto);
+    }
+    delete(id) {
+        return this.seoService.delete(id);
     }
 };
 exports.SeoController = SeoController;
 __decorate([
-    (0, roles_decorator_1.Public)(),
     (0, common_1.Get)('pages'),
-    (0, roles_decorator_1.Cacheable)(600),
-    (0, swagger_1.ApiOperation)({ summary: 'List SEO pages' }),
+    (0, roles_decorator_1.Public)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Public — List all SEO metadata pages' }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [seo_dto_1.SeoPageQueryDto]),
     __metadata("design:returntype", void 0)
 ], SeoController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.Get)('pages/slug/:slug'),
     (0, roles_decorator_1.Public)(),
-    (0, common_1.Get)('pages/:slug'),
-    (0, roles_decorator_1.Cacheable)(600),
-    (0, swagger_1.ApiOperation)({ summary: 'Get SEO page by slug' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Public — Get SEO metadata by page slug' }),
+    (0, swagger_1.ApiParam)({ name: 'slug', description: 'Page slug (e.g. contact-us)' }),
     __param(0, (0, common_1.Param)('slug')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], SeoController.prototype, "findBySlug", null);
 __decorate([
+    (0, common_1.Get)('sitemap'),
     (0, roles_decorator_1.Public)(),
-    (0, common_1.Get)('sitemap-data'),
-    (0, roles_decorator_1.Cacheable)(3600),
-    (0, swagger_1.ApiOperation)({ summary: 'Get sitemap data for published content' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Public — Get sitemap data for XML generation' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], SeoController.prototype, "getSitemapData", null);
 __decorate([
     (0, common_1.Post)('pages'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Create SEO page' }),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Create SEO page metadata' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [seo_dto_1.CreateSeoPageDto]),
     __metadata("design:returntype", void 0)
 ], SeoController.prototype, "create", null);
 __decorate([
-    (0, common_1.Post)('pages/bulk-generate'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Bulk generate programmatic SEO pages' }),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [seo_dto_1.BulkGenerateSeoDto]),
-    __metadata("design:returntype", void 0)
-], SeoController.prototype, "bulkGenerate", null);
-__decorate([
     (0, common_1.Patch)('pages/:id'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Update SEO page meta' }),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Update SEO page metadata' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'SEO Page UUID' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, seo_dto_1.UpdateSeoMetaDto]),
+    __metadata("design:paramtypes", [String, seo_dto_1.UpdateSeoPageDto]),
     __metadata("design:returntype", void 0)
 ], SeoController.prototype, "update", null);
+__decorate([
+    (0, common_1.Delete)('pages/:id'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Delete SEO page metadata' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'SEO Page UUID' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], SeoController.prototype, "delete", null);
 exports.SeoController = SeoController = __decorate([
-    (0, swagger_1.ApiTags)('SEO'),
+    (0, swagger_1.ApiTags)('SEO Meta'),
     (0, common_1.Controller)('seo'),
     __metadata("design:paramtypes", [seo_service_1.SeoService])
 ], SeoController);

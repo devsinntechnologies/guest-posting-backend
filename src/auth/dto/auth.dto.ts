@@ -1,79 +1,92 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
-  IsEnum,
-  IsOptional,
+  IsNotEmpty,
   IsString,
+  Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { UserRole } from '@prisma/client';
 
 export class RegisterDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'Jane Doe' })
   @IsString()
-  @MinLength(2)
+  @IsNotEmpty()
+  @MaxLength(100)
   name: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'jane@example.com' })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ minLength: 8 })
+  @ApiProperty({ example: 'P@ssw0rd!123', minLength: 8 })
   @IsString()
   @MinLength(8)
+  @MaxLength(64)
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, {
+    message:
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+  })
   password: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  companyName?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  websiteUrl?: string;
 }
 
 export class LoginDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'jane@example.com' })
   @IsEmail()
   email: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'P@ssw0rd!123' })
   @IsString()
+  @IsNotEmpty()
   password: string;
 }
 
 export class RefreshTokenDto {
   @ApiProperty()
   @IsString()
+  @IsNotEmpty()
   refreshToken: string;
 }
 
 export class ForgotPasswordDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'jane@example.com' })
   @IsEmail()
   email: string;
 }
 
 export class ResetPasswordDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Token received in the reset-password email' })
   @IsString()
+  @IsNotEmpty()
   token: string;
 
-  @ApiProperty({ minLength: 8 })
+  @ApiProperty({ example: 'NewP@ssw0rd!456', minLength: 8 })
   @IsString()
   @MinLength(8)
+  @MaxLength(64)
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_])/, {
+    message:
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.',
+  })
   newPassword: string;
 }
 
+export class VerifyEmailDto {
+  @ApiProperty({ description: 'Email verification token sent to the user' })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
 export class AuthTokensDto {
+  @ApiProperty()
   accessToken: string;
+
+  @ApiProperty()
   refreshToken: string;
 }
 
-export class UpdateRoleDto {
-  @ApiProperty({ enum: UserRole })
-  @IsEnum(UserRole)
-  role: UserRole;
+export class MessageResponseDto {
+  @ApiProperty()
+  message: string;
 }

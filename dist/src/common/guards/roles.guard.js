@@ -20,7 +20,7 @@ let RolesGuard = class RolesGuard {
     }
     canActivate(context) {
         const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [context.getHandler(), context.getClass()]);
-        if (!requiredRoles || requiredRoles.length === 0) {
+        if (!requiredRoles?.length) {
             return true;
         }
         const request = context
@@ -30,9 +30,8 @@ let RolesGuard = class RolesGuard {
         if (!user) {
             throw new common_1.ForbiddenException('Access denied');
         }
-        const hasRole = requiredRoles.includes(user.role);
-        if (!hasRole) {
-            throw new common_1.ForbiddenException('Insufficient permissions');
+        if (!requiredRoles.includes(user.role)) {
+            throw new common_1.ForbiddenException('You do not have permission to access this resource.');
         }
         return true;
     }

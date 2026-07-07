@@ -7,7 +7,6 @@ const swagger_1 = require("@nestjs/swagger");
 const nestjs_pino_1 = require("nestjs-pino");
 const path_1 = require("path");
 const app_module_1 = require("./app.module");
-const response_interceptor_1 = require("./common/interceptors/response.interceptor");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         rawBody: true,
@@ -15,6 +14,7 @@ async function bootstrap() {
     });
     app.useLogger(app.get(nestjs_pino_1.Logger));
     const config = app.get(config_1.ConfigService);
+    app.set('trust proxy', 1);
     app.enableCors({
         origin: (origin, callback) => {
             const corsOrigins = config.get('CORS_ORIGINS');
@@ -48,11 +48,9 @@ async function bootstrap() {
         transform: true,
         transformOptions: { enableImplicitConversion: true },
     }));
-    const reflector = app.get(core_1.Reflector);
-    app.useGlobalInterceptors(new response_interceptor_1.ResponseInterceptor(reflector));
     const swaggerConfig = new swagger_1.DocumentBuilder()
         .setTitle('Devsinn Insights API')
-        .setDescription('REST API for Devsinn Insights — guest posting and SEO content publishing platform')
+        .setDescription('REST API for Devsinn Insights — moderated publishing and content creation platform')
         .setVersion('1.0')
         .addBearerAuth()
         .build();

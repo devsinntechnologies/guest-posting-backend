@@ -1,58 +1,82 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SeoPageType } from '@prisma/client';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateSeoPageDto {
-  @ApiProperty({ enum: SeoPageType })
+  @ApiProperty({ example: 'about-us' })
+  @IsString()
+  slug: string;
+
+  @ApiProperty({ enum: SeoPageType, example: SeoPageType.CUSTOM })
   @IsEnum(SeoPageType)
-  pageType: SeoPageType;
+  type: SeoPageType;
+
+  @ApiProperty({ example: 'About Us | Devsinn Insights' })
+  @IsString()
+  title: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaTitle?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaDescription?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  metaKeywords?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ogImage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  canonicalUrl?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
-  referenceId?: string;
+  categoryId?: string;
 
+  @ApiPropertyOptional({ default: true })
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateSeoPageDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   slug?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  metaTitle?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  metaDescription?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  h1Heading?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  customContent?: string;
-}
-
-export class BulkGenerateSeoDto {
-  @ApiProperty({ enum: SeoPageType, isArray: true })
-  @IsEnum(SeoPageType, { each: true })
-  pageTypes: SeoPageType[];
-}
-
-export class SeoPageQueryDto extends PaginationDto {
   @ApiPropertyOptional({ enum: SeoPageType })
   @IsOptional()
   @IsEnum(SeoPageType)
-  pageType?: SeoPageType;
-}
+  type?: SeoPageType;
 
-export class UpdateSeoMetaDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -66,10 +90,47 @@ export class UpdateSeoMetaDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  h1Heading?: string;
+  metaKeywords?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  customContent?: string;
+  ogImage?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  canonicalUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class SeoPageQueryDto {
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @ApiPropertyOptional({ default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit: number = 20;
+
+  @ApiPropertyOptional({ enum: SeoPageType })
+  @IsOptional()
+  @IsEnum(SeoPageType)
+  type?: SeoPageType;
 }

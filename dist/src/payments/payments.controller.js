@@ -14,49 +14,49 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PaymentsController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
 const payments_service_1 = require("./payments.service");
-const payments_dto_1 = require("./dto/payments.dto");
-const pagination_dto_1 = require("../common/dto/pagination.dto");
+const payment_dto_1 = require("./dto/payment.dto");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const roles_guard_1 = require("../common/guards/roles.guard");
-const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const client_1 = require("@prisma/client");
 let PaymentsController = class PaymentsController {
     paymentsService;
     constructor(paymentsService) {
         this.paymentsService = paymentsService;
     }
-    checkout(userId, dto) {
-        return this.paymentsService.createCheckout(userId, dto);
+    initiatePayment(user, dto) {
+        return this.paymentsService.initiatePayment(user.sub, dto);
     }
     webhook(req, signature) {
         return this.paymentsService.handleWebhook(req.rawBody || Buffer.from(''), signature);
     }
-    myOrders(userId, query) {
-        return this.paymentsService.getMyOrders(userId, query);
+    mockComplete(providerTransactionId, status) {
+        return this.paymentsService.processPaymentCompletion(providerTransactionId, status || 'COMPLETED', { mockCompletedAt: new Date() });
     }
-    allOrders(query) {
-        return this.paymentsService.getAllOrders(query);
+    myPayments(user, query) {
+        return this.paymentsService.getMyPayments(user.sub, query);
+    }
+    adminGetAllPayments(query) {
+        return this.paymentsService.adminGetAllPayments(query);
     }
 };
 exports.PaymentsController = PaymentsController;
 __decorate([
-    (0, common_1.Post)('orders/checkout'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('initiate'),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Create checkout session' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)('sub')),
+    (0, swagger_1.ApiOperation)({ summary: 'USER — Initiate payment for a subscription plan' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, payments_dto_1.CheckoutDto]),
+    __metadata("design:paramtypes", [Object, payment_dto_1.InitiatePaymentDto]),
     __metadata("design:returntype", void 0)
-], PaymentsController.prototype, "checkout", null);
+], PaymentsController.prototype, "initiatePayment", null);
 __decorate([
+    (0, common_1.Post)('webhook'),
     (0, roles_decorator_1.Public)(),
-    (0, common_1.Post)('payments/webhook'),
-    (0, swagger_1.ApiOperation)({ summary: 'Stripe webhook handler' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Public — Stripe webhook endpoint' }),
     __param(0, (0, common_1.Req)()),
     __param(1, (0, common_1.Headers)('stripe-signature')),
     __metadata("design:type", Function),
@@ -64,30 +64,40 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], PaymentsController.prototype, "webhook", null);
 __decorate([
-    (0, common_1.Get)('orders/my-orders'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('mock-complete'),
+    (0, roles_decorator_1.Public)(),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Public — Simulate checkout webhook completion for local testing' }),
+    __param(0, (0, common_1.Body)('providerTransactionId')),
+    __param(1, (0, common_1.Body)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], PaymentsController.prototype, "mockComplete", null);
+__decorate([
+    (0, common_1.Get)('my'),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get current user orders' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)('sub')),
+    (0, swagger_1.ApiOperation)({ summary: "USER — Get own payment history" }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, pagination_dto_1.PaginationDto]),
+    __metadata("design:paramtypes", [Object, payment_dto_1.PaymentQueryDto]),
     __metadata("design:returntype", void 0)
-], PaymentsController.prototype, "myOrders", null);
+], PaymentsController.prototype, "myPayments", null);
 __decorate([
-    (0, common_1.Get)('admin/orders'),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, common_1.Get)(),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Get all orders (admin)' }),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, swagger_1.ApiOperation)({ summary: "ADMIN — Get all payments" }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pagination_dto_1.PaginationDto]),
+    __metadata("design:paramtypes", [payment_dto_1.AdminPaymentQueryDto]),
     __metadata("design:returntype", void 0)
-], PaymentsController.prototype, "allOrders", null);
+], PaymentsController.prototype, "adminGetAllPayments", null);
 exports.PaymentsController = PaymentsController = __decorate([
     (0, swagger_1.ApiTags)('Payments'),
-    (0, common_1.Controller)(),
+    (0, common_1.Controller)('payments'),
     __metadata("design:paramtypes", [payments_service_1.PaymentsService])
 ], PaymentsController);
 //# sourceMappingURL=payments.controller.js.map

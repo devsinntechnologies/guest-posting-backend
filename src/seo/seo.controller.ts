@@ -1,79 +1,109 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
   Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { SeoService } from './seo.service';
 import {
   CreateSeoPageDto,
-  BulkGenerateSeoDto,
   SeoPageQueryDto,
-  UpdateSeoMetaDto,
+  UpdateSeoPageDto,
 } from './dto/seo.dto';
-import { Public, Roles, Cacheable } from '../common/decorators/roles.decorator';
+import { Public, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { UserRole } from '@prisma/client';
 
-@ApiTags('SEO')
+@ApiTags('SEO Meta')
 @Controller('seo')
 export class SeoController {
-  constructor(private seoService: SeoService) {}
+  constructor(private readonly seoService: SeoService) {}
 
-  @Public()
+  /**
+   * List SEO pages (Public).
+   */
   @Get('pages')
-  @Cacheable(600)
-  @ApiOperation({ summary: 'List SEO pages' })
+  @Public()
+  @ApiOperation({ summary: 'Public — List all SEO metadata pages' })
   findAll(@Query() query: SeoPageQueryDto) {
     return this.seoService.findAll(query);
   }
 
+  /**
+   * Get SEO page config by slug.
+   * Public.
+   */
+  @Get('pages/slug/:slug')
   @Public()
-  @Get('pages/:slug')
-  @Cacheable(600)
-  @ApiOperation({ summary: 'Get SEO page by slug' })
+  @ApiOperation({ summary: 'Public — Get SEO metadata by page slug' })
+  @ApiParam({ name: 'slug', description: 'Page slug (e.g. contact-us)' })
   findBySlug(@Param('slug') slug: string) {
     return this.seoService.findBySlug(slug);
   }
 
+  /**
+   * Get Sitemap dataset.
+   * Public.
+   */
+  @Get('sitemap')
   @Public()
-  @Get('sitemap-data')
-  @Cacheable(3600)
-  @ApiOperation({ summary: 'Get sitemap data for published content' })
+  @ApiOperation({ summary: 'Public — Get sitemap data for XML generation' })
   getSitemapData() {
     return this.seoService.getSitemapData();
   }
 
+  /**
+   * Create an SEO page.
+   * ADMIN only.
+   */
   @Post('pages')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create SEO page' })
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'ADMIN — Create SEO page metadata' })
   create(@Body() dto: CreateSeoPageDto) {
     return this.seoService.create(dto);
   }
 
-  @Post('pages/bulk-generate')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN)
+  /**
+   * Update an SEO page.
+   * ADMIN only.
+   */
+  @Patch('pages/:id')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Bulk generate programmatic SEO pages' })
-  bulkGenerate(@Body() dto: BulkGenerateSeoDto) {
-    return this.seoService.bulkGenerate(dto);
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'ADMIN — Update SEO page metadata' })
+  @ApiParam({ name: 'id', description: 'SEO Page UUID' })
+  update(@Param('id') id: string, @Body() dto: UpdateSeoPageDto) {
+    return this.seoService.update(id, dto);
   }
 
-  @Patch('pages/:id')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN)
+  /**
+   * Delete an SEO page.
+   * ADMIN only.
+   */
+  @Delete('pages/:id')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update SEO page meta' })
-  update(@Param('id') id: string, @Body() dto: UpdateSeoMetaDto) {
-    return this.seoService.update(id, dto);
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'ADMIN — Delete SEO page metadata' })
+  @ApiParam({ name: 'id', description: 'SEO Page UUID' })
+  delete(@Param('id') id: string) {
+    return this.seoService.delete(id);
   }
 }

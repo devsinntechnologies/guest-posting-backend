@@ -18,81 +18,48 @@ let DashboardService = class DashboardService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async getStats(userId, role) {
-        if (role === client_1.UserRole.CONTRIBUTOR) {
-            return this.getContributorStats(userId);
-        }
-        return this.getAdminStats();
-    }
-    async getContributorStats(userId) {
-        const [submissions, byStatus, orders] = await Promise.all([
-            this.prisma.article.count({
-                where: { authorId: userId, deletedAt: null },
-            }),
-            this.prisma.article.groupBy({
-                by: ['status'],
-                where: { authorId: userId, deletedAt: null },
-                _count: true,
-            }),
-            this.prisma.order.count({
-                where: { userId, status: client_1.OrderStatus.PAID },
-            }),
-        ]);
-        return {
-            totalSubmissions: submissions,
-            submissionsByStatus: byStatus.reduce((acc, item) => {
-                acc[item.status] = item._count;
-                return acc;
-            }, {}),
-            paidOrders: orders,
-        };
-    }
     async getAdminStats() {
-        const [totalArticles, pendingReview, published, totalUsers, revenue, topArticles, recentSubmissions,] = await Promise.all([
-            this.prisma.article.count({ where: { deletedAt: null } }),
-            this.prisma.article.count({
-                where: { status: client_1.ArticleStatus.PENDING_REVIEW, deletedAt: null },
+        const [publishedContent, pendingReviewContent, totalUsers, totalSubscriptions, completedPayments, totalComments,] = await Promise.all([
+            this.prisma.content.count({
+                where: { status: client_1.ContentStatus.PUBLISHED, deletedAt: null },
             }),
-            this.prisma.article.count({
-                where: { status: client_1.ArticleStatus.PUBLISHED, deletedAt: null },
+            this.prisma.content.count({
+                where: { status: client_1.ContentStatus.PENDING_REVIEW, deletedAt: null },
             }),
-            this.prisma.user.count({ where: { deletedAt: null } }),
-            this.prisma.order.aggregate({
-                where: { status: client_1.OrderStatus.PAID },
+            this.prisma.user.count({
+                where: { isActive: true, deletedAt: null },
+            }),
+            this.prisma.subscription.count(),
+            this.prisma.payment.aggregate({
+                where: { status: client_1.PaymentStatus.COMPLETED },
                 _sum: { amount: true },
                 _count: true,
             }),
-            this.prisma.article.findMany({
-                where: { status: client_1.ArticleStatus.PUBLISHED, deletedAt: null },
-                orderBy: { viewCount: 'desc' },
-                take: 10,
-                select: {
-                    id: true,
-                    title: true,
-                    slug: true,
-                    viewCount: true,
-                    publishedAt: true,
-                },
-            }),
-            this.prisma.article.count({
-                where: {
-                    createdAt: { gte: new Date(Date.now() - 30 * 86400000) },
-                    deletedAt: null,
-                },
+            this.prisma.comment.count({
+                where: { deletedAt: null },
             }),
         ]);
         return {
-            totalArticles,
-            pendingReview,
-            published,
+            publishedContent,
+            pendingReviewContent,
             totalUsers,
+            totalSubscriptions,
             revenue: {
-                total: revenue._sum.amount || 0,
-                orderCount: revenue._count,
+                totalAmount: completedPayments._sum.amount || 0,
+                completedCount: completedPayments._count,
             },
-            topArticles,
-            submissionsLast30Days: recentSubmissions,
+            totalComments,
         };
+    }
+    async getRecentActivity(limit = 15) {
+        return this.prisma.reviewEvent.findMany({
+            take: limit,
+            orderBy: { createdAt: 'desc' },
+            include: {
+                actor: { select: { id: true, name: true, role: true } },
+                content: { select: { id: true, title: true, slug: true } },
+            },
+        });
     }
 };
 exports.DashboardService = DashboardService;

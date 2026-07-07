@@ -1,38 +1,100 @@
 import {
+  Body,
   Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
   Post,
+  Query,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
-  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
-import { FileUploadService } from '../common/services/file-upload.service';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { MediaService } from './media.service';
+import { MediaQueryDto, UpdateMediaDto } from './dto/media.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Media')
-@Controller('media')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
+@Controller('media')
 export class MediaController {
-  constructor(private fileUploadService: FileUploadService) {}
+  constructor(private readonly mediaService: MediaService) {}
 
+  /**
+   * Upload a media file (image, PDF, video, document).
+   */
   @Post('upload')
-  @ApiOperation({ summary: 'Upload an image file' })
+  @UseInterceptors(FileInterceptor('file', { storage: undefined })) // Buffer mode
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
-  async upload(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file provided');
-    }
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload a media file' })
+  upload(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.mediaService.upload(file, user.sub);
+  }
 
-    try {
-      return await this.fileUploadService.saveFile(file);
-    } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Upload failed',
-      );
-    }
+  /**
+   * List media. ADMIN sees all; USER sees own uploads.
+   */
+  @Get()
+  @ApiOperation({ summary: 'List media files' })
+  findAll(@Query() query: MediaQueryDto, @CurrentUser() user: JwtPayload) {
+    return this.mediaService.findAll(query, user.sub, user.role);
+  }
+
+  /**
+   * Get a single media item by ID.
+   */
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a media item by ID' })
+  @ApiParam({ name: 'id', description: 'Media UUID' })
+  findById(@Param('id') id: string) {
+    return this.mediaService.findById(id);
+  }
+
+  /**
+   * Update media alt text.
+   */
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update media alt text' })
+  @ApiParam({ name: 'id', description: 'Media UUID' })
+  update(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateMediaDto,
+  ) {
+    return this.mediaService.update(id, user.sub, user.role, dto);
+  }
+
+  /**
+   * Delete a media item (soft delete + physical removal).
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete a media item' })
+  @ApiParam({ name: 'id', description: 'Media UUID' })
+  delete(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.mediaService.delete(id, user.sub, user.role);
   }
 }

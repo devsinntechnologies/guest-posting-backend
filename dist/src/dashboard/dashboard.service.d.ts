@@ -1,30 +1,37 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { UserRole } from '@prisma/client';
 export declare class DashboardService {
-    private prisma;
+    private readonly prisma;
     constructor(prisma: PrismaService);
-    getStats(userId: string, role: UserRole): Promise<{
-        totalSubmissions: number;
-        submissionsByStatus: Record<string, number>;
-        paidOrders: number;
-    } | {
-        totalArticles: number;
-        pendingReview: number;
-        published: number;
+    getAdminStats(): Promise<{
+        publishedContent: number;
+        pendingReviewContent: number;
         totalUsers: number;
+        totalSubscriptions: number;
         revenue: {
-            total: number | import("@prisma/client/runtime/library").Decimal;
-            orderCount: number;
+            totalAmount: number | import("@prisma/client/runtime/library").Decimal;
+            completedCount: number;
         };
-        topArticles: {
+        totalComments: number;
+    }>;
+    getRecentActivity(limit?: number): Promise<({
+        content: {
             id: string;
             slug: string;
             title: string;
-            viewCount: number;
-            publishedAt: Date | null;
-        }[];
-        submissionsLast30Days: number;
-    }>;
-    private getContributorStats;
-    private getAdminStats;
+        };
+        actor: {
+            id: string;
+            name: string;
+            role: import("@prisma/client").$Enums.UserRole;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        contentId: string;
+        note: string | null;
+        actorId: string;
+        action: import("@prisma/client").$Enums.ReviewAction;
+        fromStatus: import("@prisma/client").$Enums.ContentStatus | null;
+        toStatus: import("@prisma/client").$Enums.ContentStatus;
+    })[]>;
 }

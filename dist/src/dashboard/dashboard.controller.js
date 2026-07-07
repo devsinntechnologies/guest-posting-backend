@@ -14,34 +14,45 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DashboardController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
-const dashboard_service_1 = require("./dashboard.service");
-const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const client_1 = require("@prisma/client");
+const dashboard_service_1 = require("./dashboard.service");
+const roles_decorator_1 = require("../common/decorators/roles.decorator");
+const roles_guard_1 = require("../common/guards/roles.guard");
 let DashboardController = class DashboardController {
     dashboardService;
     constructor(dashboardService) {
         this.dashboardService = dashboardService;
     }
-    getStats(userId, role) {
-        return this.dashboardService.getStats(userId, role);
+    getStats() {
+        return this.dashboardService.getAdminStats();
+    }
+    getRecentActivity(limit) {
+        const lim = limit ? Number(limit) : 15;
+        return this.dashboardService.getRecentActivity(lim);
     }
 };
 exports.DashboardController = DashboardController;
 __decorate([
     (0, common_1.Get)('stats'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get role-aware dashboard statistics' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)('sub')),
-    __param(1, (0, current_user_decorator_1.CurrentUser)('role')),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Get aggregate dashboard statistics' }),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], DashboardController.prototype, "getStats", null);
+__decorate([
+    (0, common_1.Get)('recent-activity'),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Get recent review/audit activities' }),
+    __param(0, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], DashboardController.prototype, "getRecentActivity", null);
 exports.DashboardController = DashboardController = __decorate([
     (0, swagger_1.ApiTags)('Dashboard'),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
     (0, common_1.Controller)('dashboard'),
     __metadata("design:paramtypes", [dashboard_service_1.DashboardService])
 ], DashboardController);

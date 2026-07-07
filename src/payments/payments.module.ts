@@ -1,13 +1,23 @@
 import { Module } from '@nestjs/common';
-import { PaymentsService } from './payments.service';
 import { PaymentsController } from './payments.controller';
-import { NotificationsModule } from '../notifications/notifications.module';
-import { EmailModule } from '../email/email.module';
+import { PaymentsService } from './payments.service';
+import { StripeProvider } from './providers/stripe.provider';
+import { PAYMENT_PROVIDER } from './interfaces/payment-provider.interface';
+import { PrismaModule } from '../prisma/prisma.module';
+import { CommonModule } from '../common/common.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
-  imports: [NotificationsModule, EmailModule],
+  imports: [PrismaModule, CommonModule, SubscriptionsModule],
   controllers: [PaymentsController],
-  providers: [PaymentsService],
+  providers: [
+    PaymentsService,
+    StripeProvider,
+    {
+      provide: PAYMENT_PROVIDER,
+      useClass: StripeProvider,
+    },
+  ],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}

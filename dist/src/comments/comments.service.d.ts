@@ -1,102 +1,37 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCommentDto, ModerateCommentDto } from './dto/comments.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { CreateCommentDto, CommentQueryDto } from './dto/comment.dto';
+import { PaginatedResult } from '../common/dto/paginated-result.dto';
 export declare class CommentsService {
-    private prisma;
+    private readonly prisma;
     constructor(prisma: PrismaService);
-    findPending(query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
+    create(contentId: string, userId: string, dto: CreateCommentDto): Promise<{
         user: {
             id: string;
             name: string;
             avatarUrl: string | null;
-        } | null;
-        article: {
-            id: string;
-            slug: string;
-            title: string;
         };
     } & {
         id: string;
         deletedAt: Date | null;
         createdAt: Date;
-        content: string;
+        updatedAt: Date;
         status: import("@prisma/client").$Enums.CommentStatus;
-        userId: string | null;
-        articleId: string;
-        parentCommentId: string | null;
-        guestName: string | null;
-        guestEmail: string | null;
-    }>>;
-    findByArticle(articleId: string, query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
-        user: {
-            id: string;
-            name: string;
-            avatarUrl: string | null;
-        } | null;
-        replies: ({
-            user: {
-                id: string;
-                name: string;
-                avatarUrl: string | null;
-            } | null;
-        } & {
-            id: string;
-            deletedAt: Date | null;
-            createdAt: Date;
-            content: string;
-            status: import("@prisma/client").$Enums.CommentStatus;
-            userId: string | null;
-            articleId: string;
-            parentCommentId: string | null;
-            guestName: string | null;
-            guestEmail: string | null;
-        })[];
-    } & {
-        id: string;
-        deletedAt: Date | null;
-        createdAt: Date;
-        content: string;
-        status: import("@prisma/client").$Enums.CommentStatus;
-        userId: string | null;
-        articleId: string;
-        parentCommentId: string | null;
-        guestName: string | null;
-        guestEmail: string | null;
-    }>>;
-    create(articleId: string, dto: CreateCommentDto, userId?: string): Promise<{
-        id: string;
-        deletedAt: Date | null;
-        createdAt: Date;
-        content: string;
-        status: import("@prisma/client").$Enums.CommentStatus;
-        userId: string | null;
-        articleId: string;
-        parentCommentId: string | null;
-        guestName: string | null;
-        guestEmail: string | null;
+        contentId: string;
+        userId: string;
+        body: string;
     }>;
-    moderate(id: string, dto: ModerateCommentDto): Promise<{
+    findByContent(contentId: string, query: CommentQueryDto): Promise<PaginatedResult<any>>;
+    hide(id: string): Promise<{
         id: string;
         deletedAt: Date | null;
         createdAt: Date;
-        content: string;
+        updatedAt: Date;
         status: import("@prisma/client").$Enums.CommentStatus;
-        userId: string | null;
-        articleId: string;
-        parentCommentId: string | null;
-        guestName: string | null;
-        guestEmail: string | null;
+        contentId: string;
+        userId: string;
+        body: string;
     }>;
-    softDelete(id: string): Promise<{
-        id: string;
-        deletedAt: Date | null;
-        createdAt: Date;
-        content: string;
-        status: import("@prisma/client").$Enums.CommentStatus;
-        userId: string | null;
-        articleId: string;
-        parentCommentId: string | null;
-        guestName: string | null;
-        guestEmail: string | null;
+    delete(id: string): Promise<{
+        message: string;
     }>;
 }

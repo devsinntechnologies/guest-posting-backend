@@ -15,92 +15,79 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommentsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const client_1 = require("@prisma/client");
 const comments_service_1 = require("./comments.service");
-const comments_dto_1 = require("./dto/comments.dto");
-const pagination_dto_1 = require("../common/dto/pagination.dto");
+const comment_dto_1 = require("./dto/comment.dto");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const roles_guard_1 = require("../common/guards/roles.guard");
-const optional_jwt_auth_guard_1 = require("../common/guards/optional-jwt-auth.guard");
-const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
-const client_1 = require("@prisma/client");
 let CommentsController = class CommentsController {
     commentsService;
     constructor(commentsService) {
         this.commentsService = commentsService;
     }
-    findByArticle(articleId, query) {
-        return this.commentsService.findByArticle(articleId, query);
+    create(contentId, dto, user) {
+        return this.commentsService.create(contentId, user.sub, dto);
     }
-    create(articleId, dto, userId) {
-        return this.commentsService.create(articleId, dto, userId);
+    findByContent(contentId, query) {
+        return this.commentsService.findByContent(contentId, query);
     }
-    findPending(query) {
-        return this.commentsService.findPending(query);
+    hide(id) {
+        return this.commentsService.hide(id);
     }
-    moderate(id, dto) {
-        return this.commentsService.moderate(id, dto);
-    }
-    remove(id) {
-        return this.commentsService.softDelete(id);
+    delete(id) {
+        return this.commentsService.delete(id);
     }
 };
 exports.CommentsController = CommentsController;
 __decorate([
-    (0, roles_decorator_1.Public)(),
-    (0, common_1.Get)('articles/:articleId/comments'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get approved comments for article' }),
-    __param(0, (0, common_1.Param)('articleId')),
-    __param(1, (0, common_1.Query)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, pagination_dto_1.PaginationDto]),
-    __metadata("design:returntype", void 0)
-], CommentsController.prototype, "findByArticle", null);
-__decorate([
-    (0, roles_decorator_1.Public)(),
-    (0, common_1.UseGuards)(optional_jwt_auth_guard_1.OptionalJwtAuthGuard),
-    (0, common_1.Post)('articles/:articleId/comments'),
-    (0, swagger_1.ApiOperation)({ summary: 'Submit comment (guest or authenticated)' }),
-    __param(0, (0, common_1.Param)('articleId')),
+    (0, common_1.Post)('content/:contentId/comments'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, swagger_1.ApiOperation)({ summary: 'USER — Add comment to content' }),
+    (0, swagger_1.ApiParam)({ name: 'contentId', description: 'Content UUID' }),
+    __param(0, (0, common_1.Param)('contentId')),
     __param(1, (0, common_1.Body)()),
-    __param(2, (0, current_user_decorator_1.CurrentUser)('sub')),
+    __param(2, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, comments_dto_1.CreateCommentDto, Object]),
+    __metadata("design:paramtypes", [String, comment_dto_1.CreateCommentDto, Object]),
     __metadata("design:returntype", void 0)
 ], CommentsController.prototype, "create", null);
 __decorate([
-    (0, common_1.Get)('comments/pending'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'List pending comments for moderation' }),
-    __param(0, (0, common_1.Query)()),
+    (0, common_1.Get)('content/:contentId/comments'),
+    (0, roles_decorator_1.Public)(),
+    (0, swagger_1.ApiOperation)({ summary: 'Public — Get visible comments' }),
+    (0, swagger_1.ApiParam)({ name: 'contentId', description: 'Content UUID' }),
+    __param(0, (0, common_1.Param)('contentId')),
+    __param(1, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pagination_dto_1.PaginationDto]),
+    __metadata("design:paramtypes", [String, comment_dto_1.CommentQueryDto]),
     __metadata("design:returntype", void 0)
-], CommentsController.prototype, "findPending", null);
+], CommentsController.prototype, "findByContent", null);
 __decorate([
-    (0, common_1.Patch)('comments/:id/moderate'),
+    (0, common_1.Patch)('comments/:id/hide'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Moderate comment' }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, comments_dto_1.ModerateCommentDto]),
-    __metadata("design:returntype", void 0)
-], CommentsController.prototype, "moderate", null);
-__decorate([
-    (0, common_1.Delete)('comments/:id'),
-    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiBearerAuth)(),
-    (0, swagger_1.ApiOperation)({ summary: 'Soft delete comment' }),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Hide a comment' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Comment UUID' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
-], CommentsController.prototype, "remove", null);
+], CommentsController.prototype, "hide", null);
+__decorate([
+    (0, common_1.Delete)('comments/:id'),
+    (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Hard delete a comment' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'Comment UUID' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], CommentsController.prototype, "delete", null);
 exports.CommentsController = CommentsController = __decorate([
     (0, swagger_1.ApiTags)('Comments'),
     (0, common_1.Controller)(),

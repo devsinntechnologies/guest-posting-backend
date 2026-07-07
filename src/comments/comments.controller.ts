@@ -1,75 +1,89 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
   Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { CommentsService } from './comments.service';
-import { CreateCommentDto, ModerateCommentDto } from './dto/comments.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { CreateCommentDto, CommentQueryDto } from './dto/comment.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
 
 @ApiTags('Comments')
 @Controller()
 export class CommentsController {
-  constructor(private commentsService: CommentsService) {}
+  constructor(private readonly commentsService: CommentsService) {}
 
-  @Public()
-  @Get('articles/:articleId/comments')
-  @ApiOperation({ summary: 'Get approved comments for article' })
-  findByArticle(
-    @Param('articleId') articleId: string,
-    @Query() query: PaginationDto,
-  ) {
-    return this.commentsService.findByArticle(articleId, query);
-  }
-
-  @Public()
-  @UseGuards(OptionalJwtAuthGuard)
-  @Post('articles/:articleId/comments')
-  @ApiOperation({ summary: 'Submit comment (guest or authenticated)' })
+  /**
+   * Submit a comment on a published content item.
+   * USER only.
+   */
+  @Post('content/:contentId/comments')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'USER — Add comment to content' })
+  @ApiParam({ name: 'contentId', description: 'Content UUID' })
   create(
-    @Param('articleId') articleId: string,
+    @Param('contentId') contentId: string,
     @Body() dto: CreateCommentDto,
-    @CurrentUser('sub') userId: string | undefined,
+    @CurrentUser() user: JwtPayload,
   ) {
-    return this.commentsService.create(articleId, dto, userId);
+    return this.commentsService.create(contentId, user.sub, dto);
   }
 
-  @Get('comments/pending')
+  /**
+   * Get visible comments for a content item.
+   */
+  @Get('content/:contentId/comments')
+  @Public()
+  @ApiOperation({ summary: 'Public — Get visible comments' })
+  @ApiParam({ name: 'contentId', description: 'Content UUID' })
+  findByContent(
+    @Param('contentId') contentId: string,
+    @Query() query: CommentQueryDto,
+  ) {
+    return this.commentsService.findByContent(contentId, query);
+  }
+
+  /**
+   * ADMIN: Hide a comment.
+   */
+  @Patch('comments/:id/hide')
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'List pending comments for moderation' })
-  findPending(@Query() query: PaginationDto) {
-    return this.commentsService.findPending(query);
+  @ApiOperation({ summary: 'ADMIN — Hide a comment' })
+  @ApiParam({ name: 'id', description: 'Comment UUID' })
+  hide(@Param('id') id: string) {
+    return this.commentsService.hide(id);
   }
 
-  @Patch('comments/:id/moderate')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Moderate comment' })
-  moderate(@Param('id') id: string, @Body() dto: ModerateCommentDto) {
-    return this.commentsService.moderate(id, dto);
-  }
-
+  /**
+   * ADMIN: Hard delete a comment.
+   */
   @Delete('comments/:id')
+  @ApiBearerAuth()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Soft delete comment' })
-  remove(@Param('id') id: string) {
-    return this.commentsService.softDelete(id);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'ADMIN — Hard delete a comment' })
+  @ApiParam({ name: 'id', description: 'Comment UUID' })
+  delete(@Param('id') id: string) {
+    return this.commentsService.delete(id);
   }
 }

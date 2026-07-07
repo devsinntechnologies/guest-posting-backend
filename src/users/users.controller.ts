@@ -1,82 +1,124 @@
 import {
+  Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
+  Param,
   Patch,
   Post,
-  Delete,
-  Body,
-  Param,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
 import { UsersService } from './users.service';
 import {
-  UpdateProfileDto,
   AdminUpdateUserDto,
-  CreateUserDto,
-} from './dto/users.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+  AdminUserQueryDto,
+  ChangePasswordDto,
+  UpdateProfileDto,
+} from './dto/user.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('users')
 export class UsersController {
-  constructor(private usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) {}
 
-  @Get('me')
-  @ApiOperation({ summary: 'Get current user profile' })
-  getProfile(@CurrentUser('sub') userId: string) {
-    return this.usersService.getProfile(userId);
-  }
-
-  @Patch('me')
-  @ApiOperation({ summary: 'Update current user profile' })
-  updateProfile(
-    @CurrentUser('sub') userId: string,
-    @Body() dto: UpdateProfileDto,
-  ) {
-    return this.usersService.updateProfile(userId, dto);
-  }
-
+  /**
+   * ADMIN: List all users with filters.
+   */
   @Get()
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'List all users (admin)' })
-  findAll(@Query() query: PaginationDto) {
+  @ApiOperation({ summary: 'ADMIN — List all users with filters' })
+  findAll(@Query() query: AdminUserQueryDto) {
     return this.usersService.findAll(query);
   }
 
+  /**
+   * Get own profile with active subscription.
+   */
+  @Get('me')
+  @ApiOperation({ summary: 'Get own profile' })
+  getMe(@CurrentUser() user: JwtPayload) {
+    return this.usersService.getMyProfile(user.sub);
+  }
+
+  /**
+   * Update own profile fields.
+   */
+  @Patch('me')
+  @ApiOperation({ summary: 'Update own profile' })
+  updateProfile(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.usersService.updateProfile(user.sub, dto);
+  }
+
+  /**
+   * Change own password.
+   */
+  @Post('me/change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change own password' })
+  changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(user.sub, dto);
+  }
+
+  /**
+   * Get a user's public profile by ID.
+   */
   @Get(':id')
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get user by ID (admin)' })
-  findOne(@Param('id') id: string) {
+  @ApiOperation({ summary: "Get a user's public profile" })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  findById(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
 
-  @Post()
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create user (admin)' })
-  create(@Body() dto: CreateUserDto) {
-    return this.usersService.adminCreate(dto);
-  }
-
+  /**
+   * ADMIN: Update a user's role or active status.
+   */
   @Patch(':id')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update user (admin)' })
-  adminUpdate(@Param('id') id: string, @Body() dto: AdminUpdateUserDto) {
-    return this.usersService.adminUpdate(id, dto);
+  @ApiOperation({ summary: "ADMIN — Update a user's role or status" })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  adminUpdateUser(
+    @Param('id') id: string,
+    @Body() dto: AdminUpdateUserDto,
+  ) {
+    return this.usersService.adminUpdateUser(id, dto);
   }
 
+  /**
+   * ADMIN: Soft-delete a user account.
+   */
   @Delete(':id')
+  @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Soft delete user (admin)' })
-  remove(@Param('id') id: string, @CurrentUser('role') role: UserRole) {
-    return this.usersService.softDelete(id, role);
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'ADMIN — Soft-delete a user account' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  softDelete(
+    @CurrentUser() admin: JwtPayload,
+    @Param('id') id: string,
+  ) {
+    return this.usersService.softDelete(admin.sub, id);
   }
 }

@@ -1,88 +1,40 @@
 import type { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
-import { CheckoutDto } from './dto/payments.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { AdminPaymentQueryDto, InitiatePaymentDto, PaymentQueryDto } from './dto/payment.dto';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 export declare class PaymentsController {
-    private paymentsService;
+    private readonly paymentsService;
     constructor(paymentsService: PaymentsService);
-    checkout(userId: string, dto: CheckoutDto): Promise<{
-        orderId: string;
+    initiatePayment(user: JwtPayload, dto: InitiatePaymentDto): Promise<{
+        paymentId: string;
         checkoutUrl: string;
-        message: string;
-    } | {
-        orderId: string;
-        checkoutUrl: string | null;
-        message?: undefined;
     }>;
     webhook(req: RawBodyRequest<Request>, signature: string): Promise<{
         received: boolean;
-        duplicate: boolean;
+        processed: boolean;
     } | {
+        success: boolean;
+        alreadyProcessed: boolean;
+        status?: undefined;
         received: boolean;
-        duplicate?: undefined;
+        processed?: undefined;
+    } | {
+        success: boolean;
+        status: string;
+        alreadyProcessed?: undefined;
+        received: boolean;
+        processed?: undefined;
     }>;
-    myOrders(userId: string, query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
-        package: {
-            id: string;
-            name: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            description: string | null;
-            price: import("@prisma/client/runtime/library").Decimal;
-            currency: string;
-            features: import("@prisma/client/runtime/library").JsonValue;
-            durationDays: number;
-        } | null;
-        article: {
-            id: string;
-            title: string;
-        } | null;
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        currency: string;
-        status: import("@prisma/client").$Enums.OrderStatus;
-        gatewayTransactionId: string | null;
-        userId: string;
-        packageId: string | null;
-        articleId: string | null;
-        amount: import("@prisma/client/runtime/library").Decimal;
-        paymentGateway: string;
-        invoiceUrl: string | null;
-    }>>;
-    allOrders(query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
-        user: {
-            id: string;
-            email: string;
-            name: string;
-        };
-        package: {
-            id: string;
-            name: string;
-            isActive: boolean;
-            createdAt: Date;
-            updatedAt: Date;
-            description: string | null;
-            price: import("@prisma/client/runtime/library").Decimal;
-            currency: string;
-            features: import("@prisma/client/runtime/library").JsonValue;
-            durationDays: number;
-        } | null;
-    } & {
-        id: string;
-        createdAt: Date;
-        updatedAt: Date;
-        currency: string;
-        status: import("@prisma/client").$Enums.OrderStatus;
-        gatewayTransactionId: string | null;
-        userId: string;
-        packageId: string | null;
-        articleId: string | null;
-        amount: import("@prisma/client/runtime/library").Decimal;
-        paymentGateway: string;
-        invoiceUrl: string | null;
-    }>>;
+    mockComplete(providerTransactionId: string, status: 'COMPLETED' | 'FAILED'): Promise<{
+        success: boolean;
+        alreadyProcessed: boolean;
+        status?: undefined;
+    } | {
+        success: boolean;
+        status: string;
+        alreadyProcessed?: undefined;
+    }>;
+    myPayments(user: JwtPayload, query: PaymentQueryDto): Promise<import("../common/dto/paginated-result.dto").PaginatedResult<any>>;
+    adminGetAllPayments(query: AdminPaymentQueryDto): Promise<import("../common/dto/paginated-result.dto").PaginatedResult<any>>;
 }

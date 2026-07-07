@@ -20,21 +20,24 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredRoles || requiredRoles.length === 0) {
+    if (!requiredRoles?.length) {
       return true;
     }
 
     const request = context
       .switchToHttp()
       .getRequest<Request & { user?: JwtPayload }>();
+
     const user = request.user;
+
     if (!user) {
       throw new ForbiddenException('Access denied');
     }
 
-    const hasRole = requiredRoles.includes(user.role as UserRole);
-    if (!hasRole) {
-      throw new ForbiddenException('Insufficient permissions');
+    if (!requiredRoles.includes(user.role as UserRole)) {
+      throw new ForbiddenException(
+        'You do not have permission to access this resource.',
+      );
     }
 
     return true;

@@ -1,41 +1,60 @@
 import {
+  Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Post,
-  Body,
   Query,
   Req,
   Headers,
   UseGuards,
 } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { PaymentsService } from './payments.service';
-import { CheckoutDto } from './dto/payments.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import {
+  AdminPaymentQueryDto,
+  InitiatePaymentDto,
+  PaymentQueryDto,
+} from './dto/payment.dto';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { Public, Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('Payments')
-@Controller()
+@Controller('payments')
 export class PaymentsController {
-  constructor(private paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post('orders/checkout')
-  @UseGuards(AuthGuard('jwt'))
+  /**
+   * Initiate a payment to purchase a subscription.
+   * USER only.
+   */
+  @Post('initiate')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create checkout session' })
-  checkout(@CurrentUser('sub') userId: string, @Body() dto: CheckoutDto) {
-    return this.paymentsService.createCheckout(userId, dto);
+  @ApiOperation({ summary: 'USER — Initiate payment for a subscription plan' })
+  initiatePayment(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: InitiatePaymentDto,
+  ) {
+    return this.paymentsService.initiatePayment(user.sub, dto);
   }
 
+  /**
+   * Stripe webhook verification endpoint.
+   * Must use raw request body.
+   */
+  @Post('webhook')
   @Public()
-  @Post('payments/webhook')
-  @ApiOperation({ summary: 'Stripe webhook handler' })
+  @ApiOperation({ summary: 'Public — Stripe webhook endpoint' })
   webhook(
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature: string,
@@ -46,20 +65,46 @@ export class PaymentsController {
     );
   }
 
-  @Get('orders/my-orders')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current user orders' })
-  myOrders(@CurrentUser('sub') userId: string, @Query() query: PaginationDto) {
-    return this.paymentsService.getMyOrders(userId, query);
+  /**
+   * Helper endpoint: Simulate checkout confirmation for testing/mocks.
+   * Works for both stripe checkout sessions and local mock checkout sessions.
+   */
+  @Post('mock-complete')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Public — Simulate checkout webhook completion for local testing' })
+  mockComplete(
+    @Body('providerTransactionId') providerTransactionId: string,
+    @Body('status') status: 'COMPLETED' | 'FAILED',
+  ) {
+    return this.paymentsService.processPaymentCompletion(
+      providerTransactionId,
+      status || 'COMPLETED',
+      { mockCompletedAt: new Date() },
+    );
   }
 
-  @Get('admin/orders')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRole.ADMIN)
+  /**
+   * Get own payment history.
+   * USER only.
+   */
+  @Get('my')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all orders (admin)' })
-  allOrders(@Query() query: PaginationDto) {
-    return this.paymentsService.getAllOrders(query);
+  @ApiOperation({ summary: "USER — Get own payment history" })
+  myPayments(@CurrentUser() user: JwtPayload, @Query() query: PaymentQueryDto) {
+    return this.paymentsService.getMyPayments(user.sub, query);
+  }
+
+  /**
+   * Get all payments.
+   * ADMIN only.
+   */
+  @Get()
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: "ADMIN — Get all payments" })
+  adminGetAllPayments(@Query() query: AdminPaymentQueryDto) {
+    return this.paymentsService.adminGetAllPayments(query);
   }
 }

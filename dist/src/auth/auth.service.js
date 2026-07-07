@@ -48,48 +48,67 @@ const jwt_1 = require("@nestjs/jwt");
 const config_1 = require("@nestjs/config");
 const bcrypt = __importStar(require("bcrypt"));
 const crypto = __importStar(require("crypto"));
-const prisma_service_1 = require("../prisma/prisma.service");
 const client_1 = require("@prisma/client");
+const prisma_service_1 = require("../prisma/prisma.service");
+const redis_service_1 = require("../common/services/redis.service");
+const email_service_1 = require("../email/email.service");
+const RESET_PREFIX = 'pwd_reset:';
+const VERIFY_PREFIX = 'email_verify:';
+const RESET_TTL = 3600;
+const VERIFY_TTL = 86400;
 let AuthService = class AuthService {
     prisma;
     jwt;
     config;
-    passwordResetTokens = new Map();
-    constructor(prisma, jwt, config) {
+    redis;
+    emailService;
+    constructor(prisma, jwt, config, redis, emailService) {
         this.prisma = prisma;
         this.jwt = jwt;
         this.config = config;
+        this.redis = redis;
+        this.emailService = emailService;
     }
     async register(dto) {
         const existing = await this.prisma.user.findUnique({
-            where: { email: dto.email },
+            where: { email: dto.email.toLowerCase() },
         });
         if (existing) {
-            throw new common_1.ConflictException('Email already registered');
+            throw new common_1.ConflictException('An account with this email already exists.');
         }
         const hashed = await bcrypt.hash(dto.password, 12);
         const user = await this.prisma.user.create({
             data: {
                 name: dto.name,
-                email: dto.email,
+                email: dto.email.toLowerCase(),
                 password: hashed,
                 role: client_1.UserRole.USER,
-                companyName: dto.companyName,
-                websiteUrl: dto.websiteUrl,
             },
         });
-        return this.generateTokens(user.id, user.email, user.role);
+        const verifyToken = crypto.randomBytes(32).toString('hex');
+        await this.redis.set(`${VERIFY_PREFIX}${verifyToken}`, user.id, VERIFY_TTL);
+        const verifyUrl = `${this.config.get('FRONTEND_URL')}/verify-email?token=${verifyToken}`;
+        await this.emailService.queueEmail(user.email, 'verify_email', 'Verify your email address', {
+            name: user.name,
+            url: verifyUrl,
+        });
+        return {
+            message: 'Registration successful. Please check your email to verify your account.',
+        };
     }
     async login(dto) {
         const user = await this.prisma.user.findFirst({
-            where: { email: dto.email, deletedAt: null },
+            where: { email: dto.email.toLowerCase(), deletedAt: null },
         });
         if (!user || !user.isActive) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException('Invalid credentials.');
         }
         const valid = await bcrypt.compare(dto.password, user.password);
         if (!valid) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException('Invalid credentials.');
+        }
+        if (!user.emailVerifiedAt) {
+            throw new common_1.UnauthorizedException('Please verify your email address before logging in.');
         }
         return this.generateTokens(user.id, user.email, user.role);
     }
@@ -104,7 +123,7 @@ let AuthService = class AuthService {
             include: { user: true },
         });
         if (!stored || stored.user.deletedAt || !stored.user.isActive) {
-            throw new common_1.UnauthorizedException('Invalid refresh token');
+            throw new common_1.UnauthorizedException('Invalid or expired refresh token.');
         }
         await this.prisma.refreshToken.update({
             where: { id: stored.id },
@@ -118,31 +137,75 @@ let AuthService = class AuthService {
             where: { tokenHash, revokedAt: null },
             data: { revokedAt: new Date() },
         });
+        return { message: 'Logged out successfully.' };
     }
     async forgotPassword(email) {
-        const user = await this.prisma.user.findUnique({ where: { email } });
-        if (!user) {
-            return { message: 'If the email exists, a reset link has been sent' };
-        }
-        const token = crypto.randomBytes(32).toString('hex');
-        this.passwordResetTokens.set(token, {
-            userId: user.id,
-            expiresAt: new Date(Date.now() + 3600000),
+        const user = await this.prisma.user.findFirst({
+            where: { email: email.toLowerCase(), deletedAt: null },
         });
-        return { message: 'If the email exists, a reset link has been sent' };
+        if (user) {
+            const token = crypto.randomBytes(32).toString('hex');
+            await this.redis.set(`${RESET_PREFIX}${token}`, user.id, RESET_TTL);
+        }
+        return {
+            message: 'If an account with that email exists, a password reset link has been sent.',
+        };
     }
     async resetPassword(token, newPassword) {
-        const entry = this.passwordResetTokens.get(token);
-        if (!entry || entry.expiresAt < new Date()) {
-            throw new common_1.BadRequestException('Invalid or expired reset token');
+        const redisKey = `${RESET_PREFIX}${token}`;
+        const userId = await this.redis.get(redisKey);
+        if (!userId) {
+            throw new common_1.BadRequestException('Invalid or expired password reset token.');
         }
         const hashed = await bcrypt.hash(newPassword, 12);
         await this.prisma.user.update({
-            where: { id: entry.userId },
+            where: { id: userId },
             data: { password: hashed },
         });
-        this.passwordResetTokens.delete(token);
-        return { message: 'Password reset successfully' };
+        await this.prisma.refreshToken.updateMany({
+            where: { userId, revokedAt: null },
+            data: { revokedAt: new Date() },
+        });
+        await this.redis.del(redisKey);
+        return { message: 'Password has been reset successfully.' };
+    }
+    async verifyEmail(token) {
+        const redisKey = `${VERIFY_PREFIX}${token}`;
+        const userId = await this.redis.get(redisKey);
+        if (!userId) {
+            throw new common_1.BadRequestException('Invalid or expired email verification token.');
+        }
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new common_1.BadRequestException('User not found.');
+        }
+        if (user.emailVerifiedAt) {
+            await this.redis.del(redisKey);
+            return { message: 'Email is already verified.' };
+        }
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { emailVerifiedAt: new Date() },
+        });
+        await this.redis.del(redisKey);
+        return { message: 'Email verified successfully. You can now log in.' };
+    }
+    async resendVerification(email) {
+        const user = await this.prisma.user.findFirst({
+            where: { email: email.toLowerCase(), deletedAt: null },
+        });
+        if (user && !user.emailVerifiedAt) {
+            const verifyToken = crypto.randomBytes(32).toString('hex');
+            await this.redis.set(`${VERIFY_PREFIX}${verifyToken}`, user.id, VERIFY_TTL);
+            const verifyUrl = `${this.config.get('FRONTEND_URL')}/verify-email?token=${verifyToken}`;
+            await this.emailService.queueEmail(user.email, 'verify_email', 'Verify your email address', {
+                name: user.name,
+                url: verifyUrl,
+            });
+        }
+        return {
+            message: 'If an unverified account with that email exists, a new verification link has been sent.',
+        };
     }
     async generateTokens(userId, email, role) {
         const payload = { sub: userId, email, role };
@@ -169,16 +232,15 @@ let AuthService = class AuthService {
     parseExpiry(expiry) {
         const match = expiry.match(/^(\d+)([smhd])$/);
         if (!match)
-            return new Date(Date.now() + 7 * 86400000);
+            return new Date(Date.now() + 7 * 86_400_000);
         const value = parseInt(match[1], 10);
-        const unit = match[2];
         const multipliers = {
-            s: 1000,
-            m: 60000,
-            h: 3600000,
-            d: 86400000,
+            s: 1_000,
+            m: 60_000,
+            h: 3_600_000,
+            d: 86_400_000,
         };
-        return new Date(Date.now() + value * multipliers[unit]);
+        return new Date(Date.now() + value * (multipliers[match[2]] ?? 86_400_000));
     }
 };
 exports.AuthService = AuthService;
@@ -186,6 +248,8 @@ exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         jwt_1.JwtService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        redis_service_1.RedisService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

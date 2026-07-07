@@ -1,28 +1,23 @@
 import slugify from 'slugify';
 
 /**
- * Generates a URL-safe slug from text. Industry-standard slugify with lowercase and strict mode.
+ * Generates a URL-safe slug from the given text.
+ * Appends a short random suffix to guarantee uniqueness within the caller's context.
  */
 export function generateSlug(text: string): string {
-  return slugify(text, { lower: true, strict: true, trim: true });
+  return slugify(text, {
+    lower: true,
+    strict: true,
+    trim: true,
+  });
 }
 
 /**
- * Ensures slug uniqueness by appending numeric suffix on collision (e.g. my-post, my-post-2).
+ * Generates a unique slug by appending a random 6-character hex suffix.
+ * Use when you need to guarantee DB uniqueness without a DB lookup.
  */
-export async function ensureUniqueSlug(
-  baseSlug: string,
-  existsFn: (slug: string) => Promise<boolean>,
-  excludeSlug?: string,
-): Promise<string> {
-  let slug = baseSlug;
-  let counter = 1;
-
-  while (true) {
-    if (excludeSlug && slug === excludeSlug) return slug;
-    const exists = await existsFn(slug);
-    if (!exists) return slug;
-    counter += 1;
-    slug = `${baseSlug}-${counter}`;
-  }
+export function generateUniqueSlug(text: string): string {
+  const base = generateSlug(text);
+  const suffix = Math.random().toString(36).substring(2, 8);
+  return `${base}-${suffix}`;
 }

@@ -14,111 +14,115 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
+const client_1 = require("@prisma/client");
 const users_service_1 = require("./users.service");
-const users_dto_1 = require("./dto/users.dto");
-const pagination_dto_1 = require("../common/dto/pagination.dto");
+const user_dto_1 = require("./dto/user.dto");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const roles_guard_1 = require("../common/guards/roles.guard");
-const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
-const client_1 = require("@prisma/client");
 let UsersController = class UsersController {
     usersService;
     constructor(usersService) {
         this.usersService = usersService;
     }
-    getProfile(userId) {
-        return this.usersService.getProfile(userId);
-    }
-    updateProfile(userId, dto) {
-        return this.usersService.updateProfile(userId, dto);
-    }
     findAll(query) {
         return this.usersService.findAll(query);
     }
-    findOne(id) {
+    getMe(user) {
+        return this.usersService.getMyProfile(user.sub);
+    }
+    updateProfile(user, dto) {
+        return this.usersService.updateProfile(user.sub, dto);
+    }
+    changePassword(user, dto) {
+        return this.usersService.changePassword(user.sub, dto);
+    }
+    findById(id) {
         return this.usersService.findById(id);
     }
-    create(dto) {
-        return this.usersService.adminCreate(dto);
+    adminUpdateUser(id, dto) {
+        return this.usersService.adminUpdateUser(id, dto);
     }
-    adminUpdate(id, dto) {
-        return this.usersService.adminUpdate(id, dto);
-    }
-    remove(id, role) {
-        return this.usersService.softDelete(id, role);
+    softDelete(admin, id) {
+        return this.usersService.softDelete(admin.sub, id);
     }
 };
 exports.UsersController = UsersController;
 __decorate([
-    (0, common_1.Get)('me'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get current user profile' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)('sub')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], UsersController.prototype, "getProfile", null);
-__decorate([
-    (0, common_1.Patch)('me'),
-    (0, swagger_1.ApiOperation)({ summary: 'Update current user profile' }),
-    __param(0, (0, current_user_decorator_1.CurrentUser)('sub')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, users_dto_1.UpdateProfileDto]),
-    __metadata("design:returntype", void 0)
-], UsersController.prototype, "updateProfile", null);
-__decorate([
     (0, common_1.Get)(),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiOperation)({ summary: 'List all users (admin)' }),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — List all users with filters' }),
     __param(0, (0, common_1.Query)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pagination_dto_1.PaginationDto]),
+    __metadata("design:paramtypes", [user_dto_1.AdminUserQueryDto]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.Get)('me'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get own profile' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "getMe", null);
+__decorate([
+    (0, common_1.Patch)('me'),
+    (0, swagger_1.ApiOperation)({ summary: 'Update own profile' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, user_dto_1.UpdateProfileDto]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "updateProfile", null);
+__decorate([
+    (0, common_1.Post)('me/change-password'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Change own password' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, user_dto_1.ChangePasswordDto]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "changePassword", null);
+__decorate([
     (0, common_1.Get)(':id'),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiOperation)({ summary: 'Get user by ID (admin)' }),
+    (0, swagger_1.ApiOperation)({ summary: "Get a user's public profile" }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'User UUID' }),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
-], UsersController.prototype, "findOne", null);
-__decorate([
-    (0, common_1.Post)(),
-    (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiOperation)({ summary: 'Create user (admin)' }),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [users_dto_1.CreateUserDto]),
-    __metadata("design:returntype", void 0)
-], UsersController.prototype, "create", null);
+], UsersController.prototype, "findById", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiOperation)({ summary: 'Update user (admin)' }),
+    (0, swagger_1.ApiOperation)({ summary: "ADMIN — Update a user's role or status" }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'User UUID' }),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, users_dto_1.AdminUpdateUserDto]),
+    __metadata("design:paramtypes", [String, user_dto_1.AdminUpdateUserDto]),
     __metadata("design:returntype", void 0)
-], UsersController.prototype, "adminUpdate", null);
+], UsersController.prototype, "adminUpdateUser", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)(client_1.UserRole.ADMIN),
-    (0, swagger_1.ApiOperation)({ summary: 'Soft delete user (admin)' }),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, current_user_decorator_1.CurrentUser)('role')),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'ADMIN — Soft-delete a user account' }),
+    (0, swagger_1.ApiParam)({ name: 'id', description: 'User UUID' }),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
-], UsersController.prototype, "remove", null);
+], UsersController.prototype, "softDelete", null);
 exports.UsersController = UsersController = __decorate([
     (0, swagger_1.ApiTags)('Users'),
     (0, swagger_1.ApiBearerAuth)(),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt'), roles_guard_1.RolesGuard),
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])
 ], UsersController);

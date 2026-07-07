@@ -48,22 +48,14 @@ let OwnershipGuard = class OwnershipGuard {
         const id = request.params.id;
         if (!id)
             return true;
-        if (resource === 'article') {
-            const article = await this.prisma.article.findFirst({
+        if (resource === 'content') {
+            const content = await this.prisma.content.findFirst({
                 where: { id, deletedAt: null },
             });
-            if (!article)
-                throw new common_1.ForbiddenException('Article not found');
-            if (article.authorId !== user.sub) {
-                throw new common_1.ForbiddenException('You can only access your own articles');
-            }
-        }
-        if (resource === 'order') {
-            const order = await this.prisma.order.findUnique({ where: { id } });
-            if (!order)
-                throw new common_1.ForbiddenException('Order not found');
-            if (order.userId !== user.sub) {
-                throw new common_1.ForbiddenException('You can only access your own orders');
+            if (!content)
+                throw new common_1.ForbiddenException('Content not found');
+            if (content.authorId !== user.sub) {
+                throw new common_1.ForbiddenException('You can only access your own content');
             }
         }
         return true;

@@ -1,17 +1,25 @@
 import { NotificationsService } from './notifications.service';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { NotificationQueryDto } from './dto/notification.dto';
+import type { JwtPayload } from '../common/decorators/current-user.decorator';
 export declare class NotificationsController {
-    private notificationsService;
+    private readonly notificationsService;
     constructor(notificationsService: NotificationsService);
-    findAll(userId: string, query: PaginationDto): Promise<import("../common/dto/pagination.dto").PaginatedResult<{
+    findAll(user: JwtPayload, query: NotificationQueryDto): Promise<import("../common/dto/paginated-result.dto").PaginatedResult<any>>;
+    markAllAsRead(user: JwtPayload): Promise<{
+        message: string;
+    }>;
+    markAsRead(id: string, user: JwtPayload): Promise<{
         id: string;
         createdAt: Date;
+        updatedAt: Date;
         title: string;
-        userId: string;
         type: import("@prisma/client").$Enums.NotificationType;
+        metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        userId: string;
         message: string;
         isRead: boolean;
-        metadata: import("@prisma/client/runtime/library").JsonValue | null;
-    }>>;
-    markAsRead(id: string, userId: string): Promise<import("@prisma/client").Prisma.BatchPayload>;
+    }>;
+    delete(id: string, user: JwtPayload): Promise<{
+        message: string;
+    }>;
 }

@@ -8,13 +8,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SeoModule = void 0;
 const common_1 = require("@nestjs/common");
-const seo_service_1 = require("./seo.service");
 const seo_controller_1 = require("./seo.controller");
+const seo_service_1 = require("./seo.service");
+const prisma_module_1 = require("../prisma/prisma.module");
+const common_module_1 = require("../common/common.module");
 let SeoModule = class SeoModule {
 };
 exports.SeoModule = SeoModule;
 exports.SeoModule = SeoModule = __decorate([
     (0, common_1.Module)({
+        imports: [prisma_module_1.PrismaModule, common_module_1.CommonModule],
         controllers: [seo_controller_1.SeoController],
         providers: [seo_service_1.SeoService],
         exports: [seo_service_1.SeoService],

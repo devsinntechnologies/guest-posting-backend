@@ -12,34 +12,58 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
-const client_1 = require("@prisma/client");
-const pagination_dto_1 = require("../common/dto/pagination.dto");
+const paginated_result_dto_1 = require("../common/dto/paginated-result.dto");
+const pagination_util_1 = require("../common/utils/pagination.util");
 let NotificationsService = class NotificationsService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
     }
     async findAll(userId, query) {
-        const page = query.page || 1;
-        const limit = query.limit || 20;
-        const skip = (0, pagination_dto_1.getSkip)(page, limit);
+        const { page, limit } = query;
+        const { skip, take } = (0, pagination_util_1.getPrismaSkipTake)(page, limit);
         const where = { userId };
         const [items, total] = await Promise.all([
             this.prisma.notification.findMany({
                 where,
                 skip,
-                take: limit,
+                take,
                 orderBy: { createdAt: 'desc' },
             }),
             this.prisma.notification.count({ where }),
         ]);
-        return (0, pagination_dto_1.paginate)(items, total, page, limit);
+        return (0, paginated_result_dto_1.createPaginatedResult)(items, total, page, limit);
     }
     async markAsRead(id, userId) {
-        return this.prisma.notification.updateMany({
+        const notification = await this.prisma.notification.findFirst({
             where: { id, userId },
+        });
+        if (!notification) {
+            throw new common_1.NotFoundException('Notification not found.');
+        }
+        return this.prisma.notification.update({
+            where: { id },
             data: { isRead: true },
         });
+    }
+    async markAllAsRead(userId) {
+        await this.prisma.notification.updateMany({
+            where: { userId, isRead: false },
+            data: { isRead: true },
+        });
+        return { message: 'All notifications marked as read.' };
+    }
+    async delete(id, userId) {
+        const notification = await this.prisma.notification.findFirst({
+            where: { id, userId },
+        });
+        if (!notification) {
+            throw new common_1.NotFoundException('Notification not found.');
+        }
+        await this.prisma.notification.delete({
+            where: { id },
+        });
+        return { message: 'Notification deleted successfully.' };
     }
     async create(dto) {
         return this.prisma.notification.create({
@@ -48,38 +72,9 @@ let NotificationsService = class NotificationsService {
                 type: dto.type,
                 title: dto.title,
                 message: dto.message,
-                metadata: dto.metadata,
+                metadata: dto.metadata || null,
             },
         });
-    }
-    async notifySubmissionReceived(articleId, authorId) {
-        const article = await this.prisma.article.findUnique({
-            where: { id: articleId },
-            include: { author: true },
-        });
-        if (!article)
-            return;
-        await this.create({
-            userId: authorId,
-            type: client_1.NotificationType.SUBMISSION_RECEIVED,
-            title: 'Submission Received',
-            message: `Your article "${article.title}" has been submitted for review.`,
-            metadata: { articleId },
-        });
-        const editors = await this.prisma.user.findMany({
-            where: {
-                role: client_1.UserRole.ADMIN,
-                isActive: true,
-                deletedAt: null,
-            },
-        });
-        await Promise.all(editors.map((editor) => this.create({
-            userId: editor.id,
-            type: client_1.NotificationType.SUBMISSION_RECEIVED,
-            title: 'New Submission',
-            message: `New article "${article.title}" submitted by ${article.author.name}.`,
-            metadata: { articleId, authorId },
-        })));
     }
 };
 exports.NotificationsService = NotificationsService;

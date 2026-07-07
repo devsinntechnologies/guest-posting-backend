@@ -14,7 +14,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const swagger_1 = require("@nestjs/swagger");
 const throttler_1 = require("@nestjs/throttler");
 const auth_service_1 = require("./auth.service");
@@ -43,13 +42,19 @@ let AuthController = class AuthController {
     resetPassword(dto) {
         return this.authService.resetPassword(dto.token, dto.newPassword);
     }
+    verifyEmail(dto) {
+        return this.authService.verifyEmail(dto.token);
+    }
+    resendVerification(dto) {
+        return this.authService.resendVerification(dto.email);
+    }
 };
 exports.AuthController = AuthController;
 __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('register'),
-    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60000 } }),
-    (0, swagger_1.ApiOperation)({ summary: 'Register a new contributor account' }),
+    (0, throttler_1.Throttle)({ default: { limit: 5, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({ summary: 'Register a new user account' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.RegisterDto]),
@@ -59,7 +64,7 @@ __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60000 } }),
+    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60_000 } }),
     (0, swagger_1.ApiOperation)({ summary: 'Login with email and password' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -70,7 +75,7 @@ __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('refresh'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Refresh access token' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Refresh access token using refresh token' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.RefreshTokenDto]),
@@ -79,8 +84,6 @@ __decorate([
 __decorate([
     (0, common_1.Post)('logout'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
-    (0, swagger_1.ApiBearerAuth)(),
     (0, swagger_1.ApiOperation)({ summary: 'Logout and revoke refresh token' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -91,8 +94,8 @@ __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('forgot-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60000 } }),
-    (0, swagger_1.ApiOperation)({ summary: 'Request password reset email' }),
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({ summary: 'Request a password reset email' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.ForgotPasswordDto]),
@@ -102,12 +105,32 @@ __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('reset-password'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, swagger_1.ApiOperation)({ summary: 'Reset password with token' }),
+    (0, swagger_1.ApiOperation)({ summary: 'Reset password using the reset token' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.ResetPasswordDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "resetPassword", null);
+__decorate([
+    (0, roles_decorator_1.Public)(),
+    (0, common_1.Get)('verify-email'),
+    (0, swagger_1.ApiOperation)({ summary: 'Verify email address using token' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.VerifyEmailDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "verifyEmail", null);
+__decorate([
+    (0, roles_decorator_1.Public)(),
+    (0, common_1.Post)('resend-verification'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, throttler_1.Throttle)({ default: { limit: 3, ttl: 60_000 } }),
+    (0, swagger_1.ApiOperation)({ summary: 'Resend email verification link' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.ForgotPasswordDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "resendVerification", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)('Auth'),
     (0, common_1.Controller)('auth'),

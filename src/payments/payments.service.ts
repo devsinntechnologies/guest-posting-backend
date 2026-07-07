@@ -1,192 +1,262 @@
 import {
+  BadRequestException,
+  ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
-  BadRequestException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Stripe from 'stripe';
 import { PrismaService } from '../prisma/prisma.service';
-import { CheckoutDto } from './dto/payments.dto';
-import { PaginationDto, paginate, getSkip } from '../common/dto/pagination.dto';
-import { OrderStatus, NotificationType } from '@prisma/client';
-import { NotificationsService } from '../notifications/notifications.service';
-import { EmailService } from '../email/email.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { PAYMENT_PROVIDER } from './interfaces/payment-provider.interface';
+import type { PaymentProvider } from './interfaces/payment-provider.interface';
+import {
+  AdminPaymentQueryDto,
+  InitiatePaymentDto,
+  PaymentQueryDto,
+} from './dto/payment.dto';
+import {
+  createPaginatedResult,
+  PaginatedResult,
+} from '../common/dto/paginated-result.dto';
+import { getPrismaSkipTake } from '../common/utils/pagination.util';
+import { NotificationType, PaymentStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService {
-  private stripe: Stripe;
-
   constructor(
-    private prisma: PrismaService,
-    private config: ConfigService,
-    private notifications: NotificationsService,
-    private email: EmailService,
-  ) {
-    const key = this.config.get<string>('STRIPE_SECRET_KEY');
-    if (key && key !== 'sk_test_xxx') {
-      this.stripe = new Stripe(key);
-    }
-  }
+    private readonly prisma: PrismaService,
+    private readonly subscriptionsService: SubscriptionsService,
+    @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+  ) {}
 
-  async createCheckout(userId: string, dto: CheckoutDto) {
-    const pkg = await this.prisma.package.findUnique({
-      where: { id: dto.packageId },
+  /**
+   * Initiate a payment for a subscription plan.
+   * Creates a PENDING payment record and returns checkout URL.
+   */
+  async initiatePayment(userId: string, dto: InitiatePaymentDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
     });
-    if (!pkg || !pkg.isActive) {
-      throw new NotFoundException('Package not found');
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
     }
 
-    const order = await this.prisma.order.create({
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { id: dto.planId },
+    });
+
+    if (!plan || !plan.isActive) {
+      throw new NotFoundException('Subscription plan not found or inactive.');
+    }
+
+    // Call payment provider checkout session creator
+    const session = await this.provider.createCheckoutSession(
+      userId,
+      user.email,
+      plan.id,
+      Number(plan.price),
+      plan.currency,
+      plan.name,
+    );
+
+    // Create a PENDING payment record
+    const payment = await this.prisma.payment.create({
       data: {
         userId,
-        packageId: pkg.id,
-        articleId: dto.articleId,
-        amount: pkg.price,
-        currency: pkg.currency,
-        status: OrderStatus.PENDING,
+        amount: plan.price,
+        currency: plan.currency,
+        status: PaymentStatus.PENDING,
+        provider: 'stripe',
+        providerTransactionId: session.providerTransactionId,
+        providerMetadata: {
+          planId: plan.id,
+        },
       },
     });
 
-    if (!this.stripe) {
-      return {
-        orderId: order.id,
-        checkoutUrl: `${this.config.get('APP_URL')}/payment/mock?order=${order.id}`,
-        message: 'Stripe not configured — mock checkout URL returned',
-      };
-    }
+    return {
+      paymentId: payment.id,
+      checkoutUrl: session.checkoutUrl,
+    };
+  }
 
-    const session = await this.stripe.checkout.sessions.create({
-      mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: pkg.currency.toLowerCase(),
-            product_data: {
-              name: pkg.name,
-              description: pkg.description || undefined,
-            },
-            unit_amount: Math.round(Number(pkg.price) * 100),
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${this.config.get('STRIPE_SUCCESS_URL')}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: this.config.get('STRIPE_CANCEL_URL') || '',
-      metadata: { orderId: order.id, userId },
+  /**
+   * Complete payment processing (used by Webhook & Mock complete endpoints).
+   * Idempotent logic.
+   */
+  async processPaymentCompletion(
+    providerTransactionId: string,
+    status: 'COMPLETED' | 'FAILED',
+    providerMetadata?: any,
+  ) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { providerTransactionId },
+      include: { user: true },
     });
 
-    return { orderId: order.id, checkoutUrl: session.url };
-  }
-
-  /** Idempotent webhook handler — processes each gatewayTransactionId once. */
-  async handleWebhook(payload: Buffer, signature: string) {
-    const webhookSecret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
-
-    if (!this.stripe || !webhookSecret || webhookSecret === 'whsec_xxx') {
-      throw new BadRequestException('Stripe webhook not configured');
+    if (!payment) {
+      throw new NotFoundException('Payment record not found.');
     }
 
-    let event: Stripe.Event;
-    try {
-      event = this.stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        webhookSecret,
+    // If payment is already resolved, return early (idempotent)
+    if (payment.status !== PaymentStatus.PENDING) {
+      return { success: true, alreadyProcessed: true };
+    }
+
+    const planId = (payment.providerMetadata as any)?.planId;
+    if (!planId) {
+      throw new BadRequestException('Plan ID missing from payment metadata.');
+    }
+
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan) {
+      throw new NotFoundException('Subscription plan not found.');
+    }
+
+    if (status === 'COMPLETED') {
+      // Activate the subscription
+      const subscription = await this.subscriptionsService.activateSubscription(
+        payment.userId,
+        plan.id,
+        plan.durationDays,
       );
-    } catch {
-      throw new BadRequestException('Invalid webhook signature');
-    }
 
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const transactionId = session.id;
-
-      const existing = await this.prisma.order.findUnique({
-        where: { gatewayTransactionId: transactionId },
-      });
-      if (existing?.status === OrderStatus.PAID) {
-        return { received: true, duplicate: true };
-      }
-
-      const orderId = session.metadata?.orderId;
-      if (!orderId) throw new BadRequestException('Missing order metadata');
-
-      const order = await this.prisma.order.update({
-        where: { id: orderId },
+      // Update payment record
+      await this.prisma.payment.update({
+        where: { id: payment.id },
         data: {
-          status: OrderStatus.PAID,
-          gatewayTransactionId: transactionId,
-          invoiceUrl:
-            typeof session.invoice === 'string' ? session.invoice : null,
+          status: PaymentStatus.COMPLETED,
+          subscriptionId: subscription.id,
+          providerMetadata: {
+            ...(payment.providerMetadata as any),
+            ...providerMetadata,
+          },
         },
-        include: { user: true },
       });
 
-      await this.notifications.create({
-        userId: order.userId,
-        type: NotificationType.PAYMENT_CONFIRMED,
-        title: 'Payment Confirmed',
-        message: `Your payment of ${String(order.amount)} ${order.currency} was confirmed.`,
-        metadata: { orderId: order.id },
+      // Send a notification
+      await this.prisma.notification.create({
+        data: {
+          userId: payment.userId,
+          type: NotificationType.PAYMENT_CONFIRMED,
+          title: 'Payment Confirmed',
+          message: `Your payment of ${payment.amount} ${payment.currency} for plan "${plan.name}" was confirmed!`,
+        },
+      }).catch(() => {});
+
+      return { success: true, status: 'COMPLETED' };
+    } else {
+      // Payment failed
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.FAILED,
+          providerMetadata: {
+            ...(payment.providerMetadata as any),
+            ...providerMetadata,
+          },
+        },
       });
 
-      await this.email.queueEmail(
-        order.user.email,
-        'payment_confirmed',
-        'Payment Confirmed',
-        {
-          name: order.user.name,
-          amount: String(order.amount),
-          currency: order.currency,
+      // Send notification
+      await this.prisma.notification.create({
+        data: {
+          userId: payment.userId,
+          type: NotificationType.PAYMENT_FAILED,
+          title: 'Payment Failed',
+          message: `Your payment of ${payment.amount} ${payment.currency} has failed.`,
         },
-      );
+      }).catch(() => {});
+
+      return { success: true, status: 'FAILED' };
     }
-
-    return { received: true };
   }
 
-  async getMyOrders(userId: string, query: PaginationDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const skip = getSkip(page, limit);
+  /**
+   * Stripe Webhook Handler.
+   */
+  async handleWebhook(rawBody: Buffer, signature: string) {
+    const result = await this.provider.verifyWebhook(rawBody, signature);
+    if (!result) {
+      return { received: true, processed: false };
+    }
 
-    const where = { userId };
+    const output = await this.processPaymentCompletion(
+      result.providerTransactionId,
+      result.status,
+      result.rawMetadata,
+    );
+
+    return { received: true, ...output };
+  }
+
+  /**
+   * Get authenticated user's payment history.
+   */
+  async getMyPayments(
+    userId: string,
+    query: PaymentQueryDto,
+  ): Promise<PaginatedResult<any>> {
+    const { page, limit, status } = query;
+    const { skip, take } = getPrismaSkipTake(page, limit);
+
+    const where = {
+      userId,
+      ...(status && { status }),
+    };
 
     const [items, total] = await Promise.all([
-      this.prisma.order.findMany({
+      this.prisma.payment.findMany({
         where,
-        skip,
-        take: limit,
         include: {
-          package: true,
-          article: { select: { id: true, title: true } },
+          subscription: {
+            include: { plan: { select: { name: true } } },
+          },
         },
+        skip,
+        take,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.order.count({ where }),
+      this.prisma.payment.count({ where }),
     ]);
 
-    return paginate(items, total, page, limit);
+    return createPaginatedResult(items, total, page, limit);
   }
 
-  async getAllOrders(query: PaginationDto) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const skip = getSkip(page, limit);
+  /**
+   * ADMIN: Get all payments across the platform.
+   */
+  async adminGetAllPayments(
+    query: AdminPaymentQueryDto,
+  ): Promise<PaginatedResult<any>> {
+    const { page, limit, status, userId, providerTransactionId } = query;
+    const { skip, take } = getPrismaSkipTake(page, limit);
+
+    const where = {
+      ...(status && { status }),
+      ...(userId && { userId }),
+      ...(providerTransactionId && { providerTransactionId }),
+    };
 
     const [items, total] = await Promise.all([
-      this.prisma.order.findMany({
-        skip,
-        take: limit,
+      this.prisma.payment.findMany({
+        where,
         include: {
           user: { select: { id: true, name: true, email: true } },
-          package: true,
+          subscription: {
+            include: { plan: { select: { name: true } } },
+          },
         },
+        skip,
+        take,
         orderBy: { createdAt: 'desc' },
       }),
-      this.prisma.order.count(),
+      this.prisma.payment.count({ where }),
     ]);
 
-    return paginate(items, total, page, limit);
+    return createPaginatedResult(items, total, page, limit);
   }
 }

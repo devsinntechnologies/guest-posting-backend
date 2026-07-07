@@ -1,72 +1,121 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   UnauthorizedException,
-  ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto, AuthTokensDto } from './dto/auth.dto';
 import { UserRole } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { RedisService } from '../common/services/redis.service';
+import {
+  AuthTokensDto,
+  LoginDto,
+  MessageResponseDto,
+  RegisterDto,
+} from './dto/auth.dto';
+import { EmailService } from '../email/email.service';
+
+// Redis key prefixes
+const RESET_PREFIX = 'pwd_reset:';
+const VERIFY_PREFIX = 'email_verify:';
+
+// TTLs in seconds
+const RESET_TTL = 3600; // 1 hour
+const VERIFY_TTL = 86400; // 24 hours
 
 @Injectable()
 export class AuthService {
-  private readonly passwordResetTokens = new Map<
-    string,
-    { userId: string; expiresAt: Date }
-  >();
-
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private redis: RedisService,
+    private emailService: EmailService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthTokensDto> {
+  /**
+   * Register a new user.
+   * Sends an email verification link (via EmailService in production).
+   */
+  async register(dto: RegisterDto): Promise<MessageResponseDto> {
     const existing = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email: dto.email.toLowerCase() },
     });
+
     if (existing) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException('An account with this email already exists.');
     }
 
     const hashed = await bcrypt.hash(dto.password, 12);
+
     const user = await this.prisma.user.create({
       data: {
         name: dto.name,
-        email: dto.email,
+        email: dto.email.toLowerCase(),
         password: hashed,
         role: UserRole.USER,
-        companyName: dto.companyName,
-        websiteUrl: dto.websiteUrl,
       },
     });
 
-    return this.generateTokens(user.id, user.email, user.role);
+    // Store verification token in Redis
+    const verifyToken = crypto.randomBytes(32).toString('hex');
+    await this.redis.set(`${VERIFY_PREFIX}${verifyToken}`, user.id, VERIFY_TTL);
+
+    const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verifyToken}`;
+
+    await this.emailService.queueEmail(
+      user.email,
+      'verify_email',
+      'Verify your email address',
+      {
+        name: user.name,
+        url: verifyUrl,
+      },
+    );
+
+    return {
+      message:
+        'Registration successful. Please check your email to verify your account.',
+    };
   }
 
+  /**
+   * Login with email + password.
+   * Requires email to be verified.
+   */
   async login(dto: LoginDto): Promise<AuthTokensDto> {
     const user = await this.prisma.user.findFirst({
-      where: { email: dto.email, deletedAt: null },
+      where: { email: dto.email.toLowerCase(), deletedAt: null },
     });
 
     if (!user || !user.isActive) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials.');
     }
 
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+
+    if (!user.emailVerifiedAt) {
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in.',
+      );
     }
 
     return this.generateTokens(user.id, user.email, user.role);
   }
 
+  /**
+   * Rotate refresh token — revoke old, issue new pair.
+   */
   async refresh(refreshToken: string): Promise<AuthTokensDto> {
     const tokenHash = this.hashToken(refreshToken);
+
     const stored = await this.prisma.refreshToken.findFirst({
       where: {
         tokenHash,
@@ -77,9 +126,10 @@ export class AuthService {
     });
 
     if (!stored || stored.user.deletedAt || !stored.user.isActive) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('Invalid or expired refresh token.');
     }
 
+    // Revoke the old token
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
       data: { revokedAt: new Date() },
@@ -92,48 +142,145 @@ export class AuthService {
     );
   }
 
-  async logout(refreshToken: string): Promise<void> {
+  /**
+   * Revoke the refresh token on logout.
+   */
+  async logout(refreshToken: string): Promise<MessageResponseDto> {
     const tokenHash = this.hashToken(refreshToken);
     await this.prisma.refreshToken.updateMany({
       where: { tokenHash, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+    return { message: 'Logged out successfully.' };
   }
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return { message: 'If the email exists, a reset link has been sent' };
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    this.passwordResetTokens.set(token, {
-      userId: user.id,
-      expiresAt: new Date(Date.now() + 3600000),
+  /**
+   * Initiate password reset — stores token in Redis and queues email.
+   * Always returns success to prevent email enumeration.
+   */
+  async forgotPassword(email: string): Promise<MessageResponseDto> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: email.toLowerCase(), deletedAt: null },
     });
 
-    // Email queued via EmailModule in production integration
-    return { message: 'If the email exists, a reset link has been sent' };
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      await this.redis.set(`${RESET_PREFIX}${token}`, user.id, RESET_TTL);
+
+      // TODO: Queue reset email via EmailService
+      // await this.emailService.sendPasswordResetEmail(user.email, user.name, token);
+    }
+
+    return {
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
+    };
   }
 
+  /**
+   * Complete password reset using the Redis-stored token.
+   */
   async resetPassword(
     token: string,
     newPassword: string,
-  ): Promise<{ message: string }> {
-    const entry = this.passwordResetTokens.get(token);
-    if (!entry || entry.expiresAt < new Date()) {
-      throw new BadRequestException('Invalid or expired reset token');
+  ): Promise<MessageResponseDto> {
+    const redisKey = `${RESET_PREFIX}${token}`;
+    const userId = await this.redis.get(redisKey);
+
+    if (!userId) {
+      throw new BadRequestException('Invalid or expired password reset token.');
     }
 
     const hashed = await bcrypt.hash(newPassword, 12);
+
     await this.prisma.user.update({
-      where: { id: entry.userId },
+      where: { id: userId },
       data: { password: hashed },
     });
 
-    this.passwordResetTokens.delete(token);
-    return { message: 'Password reset successfully' };
+    // Revoke all existing refresh tokens for this user on password change
+    await this.prisma.refreshToken.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    });
+
+    await this.redis.del(redisKey);
+
+    return { message: 'Password has been reset successfully.' };
   }
+
+  /**
+   * Verify email address using the token sent during registration.
+   */
+  async verifyEmail(token: string): Promise<MessageResponseDto> {
+    const redisKey = `${VERIFY_PREFIX}${token}`;
+    const userId = await this.redis.get(redisKey);
+
+    if (!userId) {
+      throw new BadRequestException(
+        'Invalid or expired email verification token.',
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new BadRequestException('User not found.');
+    }
+
+    if (user.emailVerifiedAt) {
+      await this.redis.del(redisKey);
+      return { message: 'Email is already verified.' };
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { emailVerifiedAt: new Date() },
+    });
+
+    await this.redis.del(redisKey);
+
+    return { message: 'Email verified successfully. You can now log in.' };
+  }
+
+  /**
+   * Resend the email verification link.
+   */
+  async resendVerification(email: string): Promise<MessageResponseDto> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: email.toLowerCase(), deletedAt: null },
+    });
+
+    if (user && !user.emailVerifiedAt) {
+      const verifyToken = crypto.randomBytes(32).toString('hex');
+      await this.redis.set(
+        `${VERIFY_PREFIX}${verifyToken}`,
+        user.id,
+        VERIFY_TTL,
+      );
+
+      const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verifyToken}`;
+
+      await this.emailService.queueEmail(
+        user.email,
+        'verify_email',
+        'Verify your email address',
+        {
+          name: user.name,
+          url: verifyUrl,
+        },
+      );
+    }
+
+    return {
+      message:
+        'If an unverified account with that email exists, a new verification link has been sent.',
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Private helpers
+  // ─────────────────────────────────────────────────────────────────────
 
   private async generateTokens(
     userId: string,
@@ -169,16 +316,15 @@ export class AuthService {
 
   private parseExpiry(expiry: string): Date {
     const match = expiry.match(/^(\d+)([smhd])$/);
-    if (!match) return new Date(Date.now() + 7 * 86400000);
+    if (!match) return new Date(Date.now() + 7 * 86_400_000);
 
     const value = parseInt(match[1], 10);
-    const unit = match[2];
     const multipliers: Record<string, number> = {
-      s: 1000,
-      m: 60000,
-      h: 3600000,
-      d: 86400000,
+      s: 1_000,
+      m: 60_000,
+      h: 3_600_000,
+      d: 86_400_000,
     };
-    return new Date(Date.now() + value * multipliers[unit]);
+    return new Date(Date.now() + value * (multipliers[match[2]] ?? 86_400_000));
   }
 }

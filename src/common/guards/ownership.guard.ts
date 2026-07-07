@@ -9,11 +9,11 @@ import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import { IS_PUBLIC_KEY } from '../decorators/roles.decorator';
-import { JwtPayload } from '../decorators/current-user.decorator';
+import type { JwtPayload } from '../decorators/current-user.decorator';
 import { Request } from 'express';
 
 export const OWNERSHIP_KEY = 'ownership';
-export const OwnershipCheck = (resource: 'article' | 'order') =>
+export const OwnershipCheck = (resource: 'content') =>
   SetMetadata(OWNERSHIP_KEY, resource);
 
 type AuthedRequest = Request & {
@@ -46,6 +46,7 @@ export class OwnershipGuard implements CanActivate {
     const user = request.user;
     if (!user) throw new ForbiddenException('Access denied');
 
+    // ADMINs bypass ownership checks
     if (user.role === UserRole.ADMIN) {
       return true;
     }
@@ -53,21 +54,13 @@ export class OwnershipGuard implements CanActivate {
     const id = request.params.id;
     if (!id) return true;
 
-    if (resource === 'article') {
-      const article = await this.prisma.article.findFirst({
+    if (resource === 'content') {
+      const content = await this.prisma.content.findFirst({
         where: { id, deletedAt: null },
       });
-      if (!article) throw new ForbiddenException('Article not found');
-      if (article.authorId !== user.sub) {
-        throw new ForbiddenException('You can only access your own articles');
-      }
-    }
-
-    if (resource === 'order') {
-      const order = await this.prisma.order.findUnique({ where: { id } });
-      if (!order) throw new ForbiddenException('Order not found');
-      if (order.userId !== user.sub) {
-        throw new ForbiddenException('You can only access your own orders');
+      if (!content) throw new ForbiddenException('Content not found');
+      if (content.authorId !== user.sub) {
+        throw new ForbiddenException('You can only access your own content');
       }
     }
 

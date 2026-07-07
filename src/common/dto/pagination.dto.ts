@@ -1,6 +1,18 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
+
+export enum SortOrder {
+  ASC = 'asc',
+  DESC = 'desc',
+}
 
 export class PaginationDto {
   @ApiPropertyOptional({ default: 1, minimum: 1 })
@@ -8,7 +20,7 @@ export class PaginationDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page?: number = 1;
+  page: number = 1;
 
   @ApiPropertyOptional({ default: 20, minimum: 1, maximum: 100 })
   @IsOptional()
@@ -16,42 +28,20 @@ export class PaginationDto {
   @IsInt()
   @Min(1)
   @Max(100)
-  limit?: number = 20;
+  limit: number = 20;
 
-  @ApiPropertyOptional({ description: 'Sort field' })
+  @ApiPropertyOptional({ description: 'Full-text search query' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Field to sort by' })
   @IsOptional()
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({ enum: SortOrder, default: SortOrder.DESC })
   @IsOptional()
-  @IsString()
-  sortOrder?: 'asc' | 'desc' = 'desc';
-}
-
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-export function paginate<T>(
-  items: T[],
-  total: number,
-  page: number,
-  limit: number,
-): PaginatedResult<T> {
-  return {
-    items,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit) || 1,
-  };
-}
-
-export function getSkip(page: number, limit: number): number {
-  return (page - 1) * limit;
+  @IsEnum(SortOrder)
+  sortOrder?: SortOrder = SortOrder.DESC;
 }
