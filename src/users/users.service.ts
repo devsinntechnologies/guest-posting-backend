@@ -46,7 +46,7 @@ export class UsersService {
   async findAll(
     query: AdminUserQueryDto,
   ): Promise<PaginatedResult<Partial<User>>> {
-    const { page, limit, search, role, isActive } = query;
+    const { page, limit, search, role, sortOrder, isActive } = query;
     const { skip, take } = getPrismaSkipTake(page, limit);
 
     const where = {
@@ -60,6 +60,8 @@ export class UsersService {
       ...(role && { role }),
       ...(isActive !== undefined && { isActive }),
     };
+
+    const orderBy = { createdAt: sortOrder ?? 'desc' } as const;
 
     const [items, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -75,7 +77,7 @@ export class UsersService {
         },
         skip,
         take,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       }),
       this.prisma.user.count({ where }),
     ]);

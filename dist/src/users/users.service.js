@@ -70,7 +70,7 @@ let UsersService = class UsersService {
         this.prisma = prisma;
     }
     async findAll(query) {
-        const { page, limit, search, role, isActive } = query;
+        const { page, limit, search, role, sortOrder, isActive } = query;
         const { skip, take } = (0, pagination_util_1.getPrismaSkipTake)(page, limit);
         const where = {
             deletedAt: null,
@@ -83,6 +83,7 @@ let UsersService = class UsersService {
             ...(role && { role }),
             ...(isActive !== undefined && { isActive }),
         };
+        const orderBy = { createdAt: sortOrder ?? 'desc' };
         const [items, total] = await Promise.all([
             this.prisma.user.findMany({
                 where,
@@ -97,7 +98,7 @@ let UsersService = class UsersService {
                 },
                 skip,
                 take,
-                orderBy: { createdAt: 'desc' },
+                orderBy,
             }),
             this.prisma.user.count({ where }),
         ]);

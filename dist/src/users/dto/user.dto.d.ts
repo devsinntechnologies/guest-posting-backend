@@ -16,6 +16,7 @@ export declare class AdminUserQueryDto {
     limit: number;
     search?: string;
     role?: UserRole;
+    sortOrder?: 'asc' | 'desc';
     isActive?: boolean;
 }
 export declare class AdminUpdateUserDto {

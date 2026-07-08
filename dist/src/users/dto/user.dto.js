@@ -86,6 +86,7 @@ class AdminUserQueryDto {
     limit = 20;
     search;
     role;
+    sortOrder;
     isActive;
 }
 exports.AdminUserQueryDto = AdminUserQueryDto;
@@ -118,6 +119,13 @@ __decorate([
     (0, class_validator_1.IsEnum)(client_1.UserRole),
     __metadata("design:type", String)
 ], AdminUserQueryDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ enum: ['asc', 'desc'] }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsIn)(['asc', 'desc']),
+    __metadata("design:type", String)
+], AdminUserQueryDto.prototype, "sortOrder", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)(),
     (0, class_validator_1.IsOptional)(),
