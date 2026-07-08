@@ -56,12 +56,26 @@ const nodemailer = __importStar(require("nodemailer"));
 const prisma_service_1 = require("../prisma/prisma.service");
 const client_1 = require("@prisma/client");
 const TEMPLATES = {
-    verify_email: (d) => `<h1>Verify Your Email</h1>` +
-        `<p>Hi ${d.name},</p>` +
-        `<p>Please verify your email address by clicking the link below:</p>` +
-        `<p><a href="${d.url}" style="padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a></p>` +
-        `<p>Alternatively, copy and paste this link in your browser: ${d.url}</p>` +
-        `<p>If you did not request this, please ignore this email.</p>`,
+    verify_email: (d) => `<!DOCTYPE html>` +
+        `<html lang="en">` +
+        `<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">` +
+        `<div style="max-width:640px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 35px rgba(15,23,42,0.08);">` +
+        `<div style="background:linear-gradient(135deg,#0f172a,#2563eb);padding:28px 32px;text-align:center;">` +
+        `<h1 style="margin:0;color:#ffffff;font-size:28px;">Verify your email</h1>` +
+        `</div>` +
+        `<div style="padding:32px;">` +
+        `<p style="margin:0 0 12px;font-size:16px;">Hi ${d.name},</p>` +
+        `<p style="margin:0 0 16px;line-height:1.6;font-size:15px;">Welcome to Devsinn Insights. Please verify your email address to activate your account and start using the platform.</p>` +
+        `<p style="margin:0 0 20px;text-align:center;">` +
+        `<a href="${d.url}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:999px;font-weight:700;">Verify Email</a>` +
+        `</p>` +
+        `<p style="margin:0 0 8px;font-size:13px;color:#475569;">If the button does not work, open this link in your browser:</p>` +
+        `<p style="margin:0 0 16px;font-size:13px;color:#2563eb;word-break:break-all;">${d.url}</p>` +
+        `<p style="margin:0;font-size:13px;color:#64748b;">This verification link expires in 24 hours. If you did not create an account, you can safely ignore this email.</p>` +
+        `</div>` +
+        `</div>` +
+        `</body>` +
+        `</html>`,
     password_reset: (d) => `<h1>Reset Your Password</h1>` +
         `<p>Hi ${d.name},</p>` +
         `<p>You requested to reset your password. Please click the link below to set a new password:</p>` +
@@ -111,15 +125,25 @@ let EmailService = EmailService_1 = class EmailService {
                 status: client_1.EmailLogStatus.QUEUED,
             },
         });
-        await this.emailQueue.add('send', {
-            to,
-            templateName,
-            subject,
-            html,
-            emailLogId: log.id,
-        }).catch((err) => {
-            this.logger.error(`BullMQ queue error: ${err.message}`);
-        });
+        try {
+            await this.emailQueue.add('send', {
+                to,
+                templateName,
+                subject,
+                html,
+                emailLogId: log.id,
+            });
+        }
+        catch (error) {
+            this.logger.error(`BullMQ queue error: ${error instanceof Error ? error.message : String(error)}`);
+            await this.sendDirect({
+                to,
+                templateName,
+                subject,
+                html,
+                emailLogId: log.id,
+            });
+        }
         return log;
     }
     async sendDirect(job) {

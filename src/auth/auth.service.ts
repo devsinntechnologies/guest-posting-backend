@@ -61,12 +61,14 @@ export class AuthService {
       },
     });
 
-    // Store verification token in Redis
     const verifyToken = crypto.randomBytes(32).toString('hex');
     await this.redis.set(`${VERIFY_PREFIX}${verifyToken}`, user.id, VERIFY_TTL);
+    await this.redis.set(`${VERIFY_PREFIX}user:${user.id}`, verifyToken, VERIFY_TTL);
 
-    const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verifyToken}`;
-
+    const frontendUrl = this.config.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+    console.log("FRONTEND_URL =", frontendUrl);
+    const verifyUrl = `${frontendUrl}/verify-email?token=${verifyToken}`;
+console.log("VERIFY_URL =", verifyUrl);
     await this.emailService.queueEmail(
       user.email,
       'verify_email',
@@ -239,6 +241,7 @@ export class AuthService {
     });
 
     await this.redis.del(redisKey);
+    await this.redis.del(`${VERIFY_PREFIX}user:${userId}`);
 
     return { message: 'Email verified successfully. You can now log in.' };
   }
@@ -252,14 +255,17 @@ export class AuthService {
     });
 
     if (user && !user.emailVerifiedAt) {
-      const verifyToken = crypto.randomBytes(32).toString('hex');
-      await this.redis.set(
-        `${VERIFY_PREFIX}${verifyToken}`,
-        user.id,
-        VERIFY_TTL,
-      );
+      const existingToken = await this.redis.get(`${VERIFY_PREFIX}user:${user.id}`);
+      if (existingToken) {
+        await this.redis.del(`${VERIFY_PREFIX}${existingToken}`);
+      }
 
-      const verifyUrl = `${this.config.get<string>('FRONTEND_URL')}/verify-email?token=${verifyToken}`;
+      const verifyToken = crypto.randomBytes(32).toString('hex');
+      await this.redis.set(`${VERIFY_PREFIX}${verifyToken}`, user.id, VERIFY_TTL);
+      await this.redis.set(`${VERIFY_PREFIX}user:${user.id}`, verifyToken, VERIFY_TTL);
+
+      const frontendUrl = this.config.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+      const verifyUrl = `${frontendUrl}/verify-email?token=${verifyToken}`;
 
       await this.emailService.queueEmail(
         user.email,

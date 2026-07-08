@@ -18,6 +18,8 @@ export declare class UpdateSubscriptionPlanDto {
 }
 export declare class SubscriptionPlanQueryDto {
     isActive?: boolean;
+    page?: number;
+    limit?: number;
 }
 export declare class PurchaseSubscriptionDto {
     planId: string;

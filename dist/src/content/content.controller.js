@@ -108,6 +108,7 @@ __decorate([
 __decorate([
     (0, common_1.Patch)(':id'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(subscription_guard_1.SubscriptionGuard),
     (0, swagger_1.ApiOperation)({ summary: 'USER — Update own draft content' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Content UUID' }),
     __param(0, (0, common_1.Param)('id')),
@@ -120,6 +121,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)(':id/submit'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(subscription_guard_1.SubscriptionGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'USER — Submit draft for admin review' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Content UUID' }),
@@ -133,6 +135,7 @@ __decorate([
 __decorate([
     (0, common_1.Post)(':id/resubmit'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(subscription_guard_1.SubscriptionGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'USER — Resubmit content after changes requested' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Content UUID' }),
@@ -146,6 +149,7 @@ __decorate([
 __decorate([
     (0, common_1.Delete)(':id'),
     (0, swagger_1.ApiBearerAuth)(),
+    (0, common_1.UseGuards)(subscription_guard_1.SubscriptionGuard),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'USER — Delete own draft content' }),
     (0, swagger_1.ApiParam)({ name: 'id', description: 'Content UUID' }),

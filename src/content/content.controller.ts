@@ -83,6 +83,7 @@ export class ContentController {
    */
   @Patch(':id')
   @ApiBearerAuth()
+  @UseGuards(SubscriptionGuard)
   @ApiOperation({ summary: 'USER — Update own draft content' })
   @ApiParam({ name: 'id', description: 'Content UUID' })
   update(
@@ -98,6 +99,7 @@ export class ContentController {
    */
   @Post(':id/submit')
   @ApiBearerAuth()
+  @UseGuards(SubscriptionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'USER — Submit draft for admin review' })
   @ApiParam({ name: 'id', description: 'Content UUID' })
@@ -114,6 +116,7 @@ export class ContentController {
    */
   @Post(':id/resubmit')
   @ApiBearerAuth()
+  @UseGuards(SubscriptionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'USER — Resubmit content after changes requested' })
   @ApiParam({ name: 'id', description: 'Content UUID' })
@@ -130,6 +133,7 @@ export class ContentController {
    */
   @Delete(':id')
   @ApiBearerAuth()
+  @UseGuards(SubscriptionGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'USER — Delete own draft content' })
   @ApiParam({ name: 'id', description: 'Content UUID' })

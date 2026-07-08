@@ -1,9 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RegisterDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
@@ -68,6 +74,33 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
+    it('accepts optional company and website fields in the registration payload', async () => {
+      const pipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
+
+      const transformed = await pipe.transform(
+        {
+          name: 'Test User',
+          email: 'new@test.com',
+          password: 'P@ssw0rd123',
+          companyName: 'Acme Labs',
+          websiteUrl: 'https://example.com',
+        },
+        { type: 'body', metatype: RegisterDto },
+      );
+
+      expect(transformed).toMatchObject({
+        name: 'Test User',
+        email: 'new@test.com',
+        password: 'P@ssw0rd123',
+        companyName: 'Acme Labs',
+        websiteUrl: 'https://example.com',
+      });
+    });
+
     it('throws ConflictException if email exists', async () => {
       prisma.user.findUnique.mockResolvedValue({ id: '1', email: 'a@b.com' });
       await expect(

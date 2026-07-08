@@ -45,6 +45,9 @@ let AuthController = class AuthController {
     verifyEmail(dto) {
         return this.authService.verifyEmail(dto.token);
     }
+    verifyEmailQuery(dto) {
+        return this.authService.verifyEmail(dto.token);
+    }
     resendVerification(dto) {
         return this.authService.resendVerification(dto.email);
     }
@@ -64,7 +67,7 @@ __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
-    (0, throttler_1.Throttle)({ default: { limit: 10, ttl: 60_000 } }),
+    (0, throttler_1.SkipThrottle)(),
     (0, swagger_1.ApiOperation)({ summary: 'Login with email and password' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -75,6 +78,7 @@ __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('refresh'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, throttler_1.SkipThrottle)(),
     (0, swagger_1.ApiOperation)({ summary: 'Refresh access token using refresh token' }),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -113,13 +117,23 @@ __decorate([
 ], AuthController.prototype, "resetPassword", null);
 __decorate([
     (0, roles_decorator_1.Public)(),
-    (0, common_1.Get)('verify-email'),
+    (0, common_1.Post)('verify-email'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
     (0, swagger_1.ApiOperation)({ summary: 'Verify email address using token' }),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [auth_dto_1.VerifyEmailDto]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "verifyEmail", null);
+__decorate([
+    (0, roles_decorator_1.Public)(),
+    (0, common_1.Get)('verify-email'),
+    (0, swagger_1.ApiOperation)({ summary: 'Verify email address using token (legacy query support)' }),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.VerifyEmailDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "verifyEmailQuery", null);
 __decorate([
     (0, roles_decorator_1.Public)(),
     (0, common_1.Post)('resend-verification'),

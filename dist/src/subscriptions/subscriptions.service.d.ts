@@ -10,7 +10,7 @@ export declare class SubscriptionsService {
     deletePlan(id: string): Promise<{
         message: string;
     }>;
-    findAllPlans(query: SubscriptionPlanQueryDto): Promise<SubscriptionPlan[]>;
+    findAllPlans(query: SubscriptionPlanQueryDto): Promise<PaginatedResult<SubscriptionPlan>>;
     findPlanById(id: string): Promise<SubscriptionPlan>;
     getMyActiveSubscription(userId: string): Promise<({
         plan: {

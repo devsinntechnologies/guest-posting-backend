@@ -42,8 +42,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => [
         {
-          ttl: (config.get<number>('THROTTLE_TTL') || 60) * 1000,
-          limit: config.get<number>('THROTTLE_LIMIT') || 100,
+          ttl: (config.get<number>('THROTTLE_TTL') ?? 60) * 1000,
+          limit: config.get<number>('THROTTLE_LIMIT') ?? 1000,
         },
       ],
       inject: [ConfigService],

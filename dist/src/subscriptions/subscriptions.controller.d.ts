@@ -4,7 +4,7 @@ import type { JwtPayload } from '../common/decorators/current-user.decorator';
 export declare class SubscriptionsController {
     private readonly subscriptionsService;
     constructor(subscriptionsService: SubscriptionsService);
-    findAllPlans(query: SubscriptionPlanQueryDto): Promise<{
+    findAllPlans(query: SubscriptionPlanQueryDto): Promise<import("../common/dto/paginated-result.dto").PaginatedResult<{
         id: string;
         name: string;
         isActive: boolean;
@@ -15,7 +15,7 @@ export declare class SubscriptionsController {
         currency: string;
         durationDays: number;
         features: import("@prisma/client/runtime/library").JsonValue;
-    }[]>;
+    }>>;
     findPlanById(id: string): Promise<{
         id: string;
         name: string;

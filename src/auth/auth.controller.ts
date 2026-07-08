@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import {
   ForgotPasswordDto,
@@ -44,7 +44,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @SkipThrottle()
   @ApiOperation({ summary: 'Login with email and password' })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
@@ -56,6 +56,7 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @SkipThrottle()
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
   refresh(@Body() dto: RefreshTokenDto) {
     return this.authService.refresh(dto.refreshToken);
@@ -98,9 +99,17 @@ export class AuthController {
    * Verify email address using the token sent during registration.
    */
   @Public()
-  @Get('verify-email')
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Verify email address using token' })
-  verifyEmail(@Query() dto: VerifyEmailDto) {
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto.token);
+  }
+
+  @Public()
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Verify email address using token (legacy query support)' })
+  verifyEmailQuery(@Query() dto: VerifyEmailDto) {
     return this.authService.verifyEmail(dto.token);
   }
 

@@ -10,5 +10,6 @@ export declare class AuthController {
     forgotPassword(dto: ForgotPasswordDto): Promise<import("./dto/auth.dto").MessageResponseDto>;
     resetPassword(dto: ResetPasswordDto): Promise<import("./dto/auth.dto").MessageResponseDto>;
     verifyEmail(dto: VerifyEmailDto): Promise<import("./dto/auth.dto").MessageResponseDto>;
+    verifyEmailQuery(dto: VerifyEmailDto): Promise<import("./dto/auth.dto").MessageResponseDto>;
     resendVerification(dto: ForgotPasswordDto): Promise<import("./dto/auth.dto").MessageResponseDto>;
 }

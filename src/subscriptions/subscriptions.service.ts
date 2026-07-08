@@ -88,13 +88,25 @@ export class SubscriptionsService {
     return { message: 'Subscription plan deleted successfully.' };
   }
 
-  async findAllPlans(query: SubscriptionPlanQueryDto): Promise<SubscriptionPlan[]> {
-    return this.prisma.subscriptionPlan.findMany({
-      where: {
-        ...(query.isActive !== undefined && { isActive: query.isActive }),
-      },
-      orderBy: { price: 'asc' },
-    });
+  async findAllPlans(query: SubscriptionPlanQueryDto): Promise<PaginatedResult<SubscriptionPlan>> {
+    const { page = 1, limit = 20 } = query;
+    const { skip, take } = getPrismaSkipTake(page, limit);
+
+    const where = {
+      ...(query.isActive !== undefined && { isActive: query.isActive }),
+    };
+
+    const [items, total] = await Promise.all([
+      this.prisma.subscriptionPlan.findMany({
+        where,
+        orderBy: { price: 'asc' },
+        skip,
+        take,
+      }),
+      this.prisma.subscriptionPlan.count({ where }),
+    ]);
+
+    return createPaginatedResult(items, total, page, limit);
   }
 
   async findPlanById(id: string): Promise<SubscriptionPlan> {

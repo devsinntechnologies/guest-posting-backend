@@ -121,6 +121,8 @@ __decorate([
 ], UpdateSubscriptionPlanDto.prototype, "isActive", void 0);
 class SubscriptionPlanQueryDto {
     isActive;
+    page = 1;
+    limit = 20;
 }
 exports.SubscriptionPlanQueryDto = SubscriptionPlanQueryDto;
 __decorate([
@@ -130,6 +132,23 @@ __decorate([
     (0, class_transformer_1.Type)(() => Boolean),
     __metadata("design:type", Boolean)
 ], SubscriptionPlanQueryDto.prototype, "isActive", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ default: 1 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    __metadata("design:type", Number)
+], SubscriptionPlanQueryDto.prototype, "page", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ default: 20 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.Min)(1),
+    (0, class_validator_1.Max)(100),
+    __metadata("design:type", Number)
+], SubscriptionPlanQueryDto.prototype, "limit", void 0);
 class PurchaseSubscriptionDto {
     planId;
 }

@@ -53,8 +53,8 @@ exports.AppModule = AppModule = __decorate([
                 imports: [config_1.ConfigModule],
                 useFactory: (config) => [
                     {
-                        ttl: (config.get('THROTTLE_TTL') || 60) * 1000,
-                        limit: config.get('THROTTLE_LIMIT') || 100,
+                        ttl: (config.get('THROTTLE_TTL') ?? 60) * 1000,
+                        limit: config.get('THROTTLE_LIMIT') ?? 1000,
                     },
                 ],
                 inject: [config_1.ConfigService],
